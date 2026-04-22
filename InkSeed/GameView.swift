@@ -4,16 +4,27 @@ struct GameView: View {
     @StateObject private var gameState = GameState()
     @StateObject private var interactionState = BoardInteractionState()
     @State private var showHelp = false
+    @State private var showSplash = true
+    private let splashPreset: SplashDurationPreset = .balanced
 
     var body: some View {
         ZStack {
             AppTheme.paperBackground.ignoresSafeArea()
 
-            switch gameState.flowState {
-            case .welcome:
-                welcomeView
-            case .setup, .play:
-                gameSurface
+            if showSplash {
+                InkSeedSplashView(onFinished: {
+                    withAnimation(.easeInOut(duration: 0.35)) {
+                        showSplash = false
+                    }
+                }, durationPreset: splashPreset)
+                .transition(.opacity)
+            } else {
+                switch gameState.flowState {
+                case .welcome:
+                    welcomeView
+                case .setup, .play:
+                    gameSurface
+                }
             }
         }
         .sheet(isPresented: $showHelp) {
@@ -25,12 +36,23 @@ struct GameView: View {
         VStack(spacing: 24) {
             Spacer()
             VStack(spacing: 8) {
+                InkSeedLogoSymbol()
+                    .frame(height: 64)
+                    .padding(.bottom, 6)
                 Text("InkSeed")
                     .font(.system(size: 60, weight: .semibold, design: .rounded))
                     .foregroundStyle(AppTheme.graphiteInk.opacity(0.95))
+                Text("INKSEED")
+                    .font(.system(size: 26, weight: .regular, design: .serif))
+                    .tracking(6.4)
+                    .foregroundStyle(AppTheme.graphiteInk.opacity(0.88))
                 Text("Calm strategy through drawing.")
                     .font(.title3)
                     .foregroundStyle(AppTheme.graphiteInk.opacity(0.62))
+                Text("Every move plants a possibility.")
+                    .font(.system(size: 17, weight: .regular, design: .serif))
+                    .tracking(0.55)
+                    .foregroundStyle(AppTheme.graphiteInk.opacity(0.52))
             }
 
             Button {

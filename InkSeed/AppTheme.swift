@@ -1,9 +1,12 @@
 import SwiftUI
 
 enum AppTheme {
-    static let paperBackground = Color(hex: 0xF8F7F4)
-    static let graphiteInk = Color(hex: 0x1E1E1E)
+    static let paperBackground = Color(hex: 0xF6F2E8)
+    static let paperSecondary = Color(hex: 0xEFE9DC)
+    static let graphiteInk = Color(hex: 0x1C1C1C)
     static let royalPurple = Color(hex: 0x7C3AED)
+    static let playerOneUndertone = Color(hex: 0x6D47C8)
+    static let playerTwoUndertone = Color(hex: 0x4363C7)
 }
 
 extension Color {

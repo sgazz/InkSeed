@@ -39,12 +39,16 @@ enum Geometry {
             .min() ?? .greatestFiniteMagnitude
     }
 
-    static func minDistanceBetweenPolylines(_ lhs: [CGPoint], _ rhs: [CGPoint]) -> CGFloat {
+    static func minDistanceBetweenPolylines(
+        _ lhs: [CGPoint],
+        _ rhs: [CGPoint],
+        segmentsIntersectEpsilon: CGFloat = 0.5
+    ) -> CGFloat {
         guard lhs.count > 1, rhs.count > 1 else { return .greatestFiniteMagnitude }
         var best = CGFloat.greatestFiniteMagnitude
         for ls in zip(lhs, lhs.dropFirst()) {
             for rs in zip(rhs, rhs.dropFirst()) {
-                best = min(best, segmentToSegmentDistance(ls.0, ls.1, rs.0, rs.1))
+                best = min(best, segmentToSegmentDistance(ls.0, ls.1, rs.0, rs.1, epsilon: segmentsIntersectEpsilon))
             }
         }
         return best
@@ -112,7 +116,7 @@ enum Geometry {
         _ p2: CGPoint,
         _ q1: CGPoint,
         _ q2: CGPoint,
-        epsilon: CGFloat = 0.5
+        epsilon: CGFloat = 0.30
     ) -> Bool {
         if distance(p1, q1) < epsilon || distance(p1, q2) < epsilon || distance(p2, q1) < epsilon || distance(p2, q2) < epsilon {
             return false
@@ -142,8 +146,14 @@ enum Geometry {
         return distance(point, projection)
     }
 
-    private static func segmentToSegmentDistance(_ a1: CGPoint, _ a2: CGPoint, _ b1: CGPoint, _ b2: CGPoint) -> CGFloat {
-        if segmentsIntersect(a1, a2, b1, b2) {
+    private static func segmentToSegmentDistance(
+        _ a1: CGPoint,
+        _ a2: CGPoint,
+        _ b1: CGPoint,
+        _ b2: CGPoint,
+        epsilon: CGFloat
+    ) -> CGFloat {
+        if segmentsIntersect(a1, a2, b1, b2, epsilon: epsilon) {
             return 0
         }
         return min(

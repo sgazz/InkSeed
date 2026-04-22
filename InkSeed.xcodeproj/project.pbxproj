@@ -6,14 +6,35 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		CFF5A6722F993F5800B40A0B /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CFF5A6712F993F5800B40A0B /* XCTest.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		CFF5A67A2F993F5800B40A0B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CFF5A65A2F993F5700B40A0B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CFF5A6612F993F5700B40A0B;
+			remoteInfo = InkSeed;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		CFF5A6622F993F5700B40A0B /* InkSeed.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = InkSeed.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CFF5A66A2F993F5800B40A0B /* InkSeedTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = InkSeedTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CFF5A6712F993F5800B40A0B /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CFF5A6642F993F5700B40A0B /* InkSeed */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = InkSeed;
+			sourceTree = "<group>";
+		};
+		CFF5A6692F993F5800B40A0B /* InkSeedTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = InkSeedTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -26,6 +47,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CFF5A6752F993F5800B40A0B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CFF5A6722F993F5800B40A0B /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -33,7 +62,9 @@
 			isa = PBXGroup;
 			children = (
 				CFF5A6642F993F5700B40A0B /* InkSeed */,
+				CFF5A6692F993F5800B40A0B /* InkSeedTests */,
 				CFF5A6632F993F5700B40A0B /* Products */,
+				CFF5A6702F993F5800B40A0B /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -41,8 +72,17 @@
 			isa = PBXGroup;
 			children = (
 				CFF5A6622F993F5700B40A0B /* InkSeed.app */,
+				CFF5A66A2F993F5800B40A0B /* InkSeedTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		CFF5A6702F993F5800B40A0B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				CFF5A6712F993F5800B40A0B /* XCTest.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -69,6 +109,29 @@
 			productName = InkSeed;
 			productReference = CFF5A6622F993F5700B40A0B /* InkSeed.app */;
 			productType = "com.apple.product-type.application";
+		};
+		CFF5A6792F993F5800B40A0B /* InkSeedTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CFF5A6822F993F5800B40A0B /* Build configuration list for PBXNativeTarget "InkSeedTests" */;
+			buildPhases = (
+				CFF5A6742F993F5800B40A0B /* Sources */,
+				CFF5A6752F993F5800B40A0B /* Frameworks */,
+				CFF5A6762F993F5800B40A0B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CFF5A67B2F993F5800B40A0B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CFF5A6692F993F5800B40A0B /* InkSeedTests */,
+			);
+			name = InkSeedTests;
+			packageProductDependencies = (
+			);
+			productName = InkSeedTests;
+			productReference = CFF5A66A2F993F5800B40A0B /* InkSeedTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -100,12 +163,20 @@
 			projectRoot = "";
 			targets = (
 				CFF5A6612F993F5700B40A0B /* InkSeed */,
+				CFF5A6792F993F5800B40A0B /* InkSeedTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		CFF5A6602F993F5700B40A0B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CFF5A6762F993F5800B40A0B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +193,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CFF5A6742F993F5800B40A0B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		CFF5A67B2F993F5800B40A0B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CFF5A6612F993F5700B40A0B /* InkSeed */;
+			targetProxy = CFF5A67A2F993F5800B40A0B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		CFF5A66B2F993F5800B40A0B /* Debug */ = {
@@ -310,6 +396,58 @@
 			};
 			name = Release;
 		};
+		CFF5A6802F993F5800B40A0B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 83F7KY8L5Y;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Gazza.InkSeedTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/InkSeed.app/InkSeed";
+				TEST_TARGET_NAME = InkSeed;
+			};
+			name = Debug;
+		};
+		CFF5A6812F993F5800B40A0B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 83F7KY8L5Y;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Gazza.InkSeedTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/InkSeed.app/InkSeed";
+				TEST_TARGET_NAME = InkSeed;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -327,6 +465,15 @@
 			buildConfigurations = (
 				CFF5A66E2F993F5800B40A0B /* Debug */,
 				CFF5A66F2F993F5800B40A0B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CFF5A6822F993F5800B40A0B /* Build configuration list for PBXNativeTarget "InkSeedTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CFF5A6802F993F5800B40A0B /* Debug */,
+				CFF5A6812F993F5800B40A0B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -26,6 +26,8 @@ final class GameState: ObservableObject {
     @Published var turnPhase: TurnPhase = .drawLine
     @Published var pendingMove: PendingMove?
     @Published var winner: Player?
+    @Published var lastInsertedDotID: UUID?
+    @Published var geometryProfile: GeometryProfile = .playable
 
     let maxDegreePerDot: Int = 3
     let minSetupDots: Int = 3
@@ -38,6 +40,7 @@ final class GameState: ObservableObject {
         turnPhase = .drawLine
         pendingMove = nil
         winner = nil
+        lastInsertedDotID = nil
         flowState = .setup
     }
 
@@ -90,6 +93,7 @@ final class GameState: ObservableObject {
         
         let newDot = DotModel(position: splitPoint, degree: 2)
         dots.append(newDot)
+        lastInsertedDotID = newDot.id
         
         if pending.stroke.startDotID == pending.stroke.endDotID {
             incrementDegree(for: pending.stroke.startDotID, amount: 2)
@@ -141,4 +145,22 @@ final class GameState: ObservableObject {
         if let dot = playableDots.first, dot.degree <= 1 { return true } // loop potential
         return false
     }
+
+#if DEBUG
+    func debugSetBoardState(
+        dots: [DotModel],
+        edges: [EdgeModel],
+        currentPlayer: Player = .one,
+        profile: GeometryProfile = .playable
+    ) {
+        self.dots = dots
+        self.edges = edges
+        self.currentPlayer = currentPlayer
+        self.geometryProfile = profile
+        self.flowState = .play
+        self.turnPhase = .drawLine
+        self.pendingMove = nil
+        self.winner = nil
+    }
+#endif
 }

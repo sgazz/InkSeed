@@ -11,7 +11,7 @@ enum StrokeProcessing {
     static func process(
         rawPoints: [CGPoint],
         dots: [DotModel],
-        endpointSnapRadius: CGFloat = 54
+        profile: GeometryProfile
     ) -> ProcessedStroke? {
         guard rawPoints.count > 3 else { return nil }
 
@@ -22,8 +22,8 @@ enum StrokeProcessing {
         guard
             let first = simplified.first,
             let last = simplified.last,
-            let startDot = nearestDot(to: first, dots: dots, maxDistance: endpointSnapRadius),
-            let endDot = nearestDot(to: last, dots: dots, maxDistance: endpointSnapRadius)
+            let startDot = nearestDot(to: first, dots: dots, maxDistance: profile.endpointSnapRadius),
+            let endDot = nearestDot(to: last, dots: dots, maxDistance: profile.endpointSnapRadius)
         else {
             return nil
         }
