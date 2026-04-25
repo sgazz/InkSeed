@@ -139,10 +139,16 @@ struct BoardView: View {
     private var edgeLayer: some View {
         Canvas { context, _ in
             for edge in gameState.edges {
-                guard edge.points.count > 1 else { continue }
+                let trimmed = trimmedPolylineForNodeBoundaries(
+                    points: edge.points,
+                    startDotID: edge.startDotID,
+                    endDotID: edge.endDotID,
+                    nodeRadius: nodeOuterDiameter * 0.5
+                )
+                guard trimmed.count > 1 else { continue }
                 drawInkStroke(
                     in: &context,
-                    points: edge.points,
+                    points: trimmed,
                     undertone: edge.owner == .one ? AppTheme.playerOneUndertone : AppTheme.playerTwoUndertone,
                     baseWidth: 3.5,
                     phase: edge.inkPhase
@@ -423,5 +429,53 @@ struct BoardView: View {
     private func pseudoRandom(_ value: CGFloat) -> CGFloat {
         let raw = sin(value * 12.9898) * 43758.5453
         return raw - floor(raw)
+    }
+
+    private func trimmedPolylineForNodeBoundaries(
+        points: [CGPoint],
+        startDotID: UUID,
+        endDotID: UUID,
+        nodeRadius: CGFloat
+    ) -> [CGPoint] {
+        guard points.count > 1 else { return points }
+        guard let startDot = gameState.dot(withID: startDotID),
+              let endDot = gameState.dot(withID: endDotID) else {
+            return points
+        }
+
+        let startTrimmed = trimFromStart(points: points, center: startDot.position, radius: nodeRadius)
+        let endTrimmed = trimFromEnd(points: startTrimmed, center: endDot.position, radius: nodeRadius)
+        return endTrimmed.count > 1 ? endTrimmed : points
+    }
+
+    private func trimFromStart(points: [CGPoint], center: CGPoint, radius: CGFloat) -> [CGPoint] {
+        guard points.count > 1 else { return points }
+        var result = points
+        var scan = 0
+        while scan < result.count - 1 {
+            let a = result[scan]
+            let b = result[scan + 1]
+            let da = Geometry.distance(a, center)
+            let db = Geometry.distance(b, center)
+
+            if da <= radius, db > radius {
+                let denom = max(db - da, 0.0001)
+                let t = min(max((radius - da) / denom, 0), 1)
+                let boundary = CGPoint(
+                    x: a.x + (b.x - a.x) * t,
+                    y: a.y + (b.y - a.y) * t
+                )
+                result[scan] = boundary
+                return Array(result[scan...])
+            }
+            scan += 1
+        }
+        return points
+    }
+
+    private func trimFromEnd(points: [CGPoint], center: CGPoint, radius: CGFloat) -> [CGPoint] {
+        let reversed = Array(points.reversed())
+        let trimmed = trimFromStart(points: reversed, center: center, radius: radius)
+        return Array(trimmed.reversed())
     }
 }
