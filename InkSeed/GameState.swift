@@ -121,7 +121,7 @@ final class GameState: ObservableObject {
         
         pendingMove = nil
         turnPhase = .drawLine
-        if !hasAnyValidTurn() {
+        if !hasDegreeBasedTurnPotential() {
             winner = currentPlayer
             return
         }
@@ -137,12 +137,14 @@ final class GameState: ObservableObject {
         dots[index].degree += amount
     }
     
-    private func hasAnyValidTurn() -> Bool {
-        // Feel-first MVP heuristika: ako postoje bar dve tačke sa slobodnim stepenom,
-        // verovatno postoji barem jedan validan potez.
+    private func hasAnyLegalTurn() -> Bool {
+        RulesEngine.hasAnyLegalMove(gameState: self, profile: geometryProfile)
+    }
+
+    private func hasDegreeBasedTurnPotential() -> Bool {
         let playableDots = dots.filter { $0.degree < maxDegreePerDot }
         if playableDots.count >= 2 { return true }
-        if let dot = playableDots.first, dot.degree <= 1 { return true } // loop potential
+        if playableDots.contains(where: { $0.degree + 2 <= maxDegreePerDot }) { return true }
         return false
     }
 
@@ -151,12 +153,12 @@ final class GameState: ObservableObject {
         dots: [DotModel],
         edges: [EdgeModel],
         currentPlayer: Player = .one,
-        profile: GeometryProfile = .playable
+        profile: GeometryProfile? = nil
     ) {
         self.dots = dots
         self.edges = edges
         self.currentPlayer = currentPlayer
-        self.geometryProfile = profile
+        self.geometryProfile = profile ?? .playable
         self.flowState = .play
         self.turnPhase = .drawLine
         self.pendingMove = nil

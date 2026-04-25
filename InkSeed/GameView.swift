@@ -4,7 +4,11 @@ struct GameView: View {
     @StateObject private var gameState = GameState()
     @StateObject private var interactionState = BoardInteractionState()
     @State private var showHelp = false
+    @State private var showPaintMatch = false
     @State private var showSplash = true
+    @State private var isBottomBarCollapsed = false
+    @State private var prefersDarkTheme = false
+    @State private var modeSelection = 0
     private let splashPreset: SplashDurationPreset = .balanced
 
     var body: some View {
@@ -30,6 +34,14 @@ struct GameView: View {
         .sheet(isPresented: $showHelp) {
             helpSheet
         }
+        .sheet(isPresented: $showPaintMatch) {
+            PaintMatchView(
+                edges: gameState.edges,
+                dots: gameState.dots,
+                isJuniorPalette: false
+            )
+        }
+        .preferredColorScheme(prefersDarkTheme ? .dark : .light)
     }
 
     private var welcomeView: some View {
@@ -42,10 +54,6 @@ struct GameView: View {
                 Text("InkSeed")
                     .font(.system(size: 60, weight: .semibold, design: .rounded))
                     .foregroundStyle(AppTheme.graphiteInk.opacity(0.95))
-                Text("INKSEED")
-                    .font(.system(size: 26, weight: .regular, design: .serif))
-                    .tracking(6.4)
-                    .foregroundStyle(AppTheme.graphiteInk.opacity(0.88))
                 Text("Calm strategy through drawing.")
                     .font(.title3)
                     .foregroundStyle(AppTheme.graphiteInk.opacity(0.62))
@@ -71,43 +79,119 @@ struct GameView: View {
     }
 
     private var gameSurface: some View {
-        VStack(spacing: 16) {
-            topBar
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 10) {
+                topBar
 
-            BoardView(gameState: gameState, interactionState: interactionState)
-                .frame(maxWidth: 980, maxHeight: 700)
-                .padding(.horizontal, 24)
+                BoardView(gameState: gameState, interactionState: interactionState)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, 12)
 
+                if !isBottomBarCollapsed {
+                    bottomBar
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .padding(.vertical, 10)
+
+            if isBottomBarCollapsed {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.28)) {
+                        isBottomBarCollapsed = false
+                    }
+                } label: {
+                    Image(systemName: "chevron.up")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppTheme.graphiteInk.opacity(0.56))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(AppTheme.paperSecondary.opacity(0.86), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.bottom, 8)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
+        .padding(.bottom, isBottomBarCollapsed ? 6 : 12)
+        .animation(.easeInOut(duration: 0.28), value: isBottomBarCollapsed)
+    }
+
+    private var topBar: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Button("New Game") {
+                    gameState.startNewGame()
+                }
+                .buttonStyle(.bordered)
+
+                Button("Restart") {
+                    gameState.restartPlay()
+                }
+                .buttonStyle(.bordered)
+
+                Button("Help") {
+                    showHelp = true
+                }
+                .buttonStyle(.bordered)
+            }
+
+            Spacer()
+
+            InkSeedLogoSymbol()
+                .frame(width: 34, height: 16)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(AppTheme.paperSecondary.opacity(0.72), in: Capsule())
+
+            Spacer()
+
+            HStack(spacing: 8) {
+                Picker("", selection: $modeSelection) {
+                    Text("Premium").tag(0)
+                    Text("Junior").tag(1)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 150)
+
+                Button {
+                    prefersDarkTheme.toggle()
+                } label: {
+                    Image(systemName: prefersDarkTheme ? "sun.max" : "moon")
+                        .frame(width: 18, height: 18)
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+        .padding(.horizontal, 12)
+        .tint(AppTheme.royalPurple)
+    }
+
+    private var bottomBar: some View {
+        Group {
             if gameState.flowState == .setup {
                 setupFooter
             } else {
                 playerFooter
             }
         }
-        .padding(.vertical, 20)
-    }
-
-    private var topBar: some View {
-        HStack(spacing: 12) {
-            Button("New Game") {
-                gameState.startNewGame()
+        .overlay(alignment: .top) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.28)) {
+                    isBottomBarCollapsed = true
+                }
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppTheme.graphiteInk.opacity(0.52))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.paperBackground.opacity(0.9), in: Capsule())
+                    .overlay(Capsule().stroke(AppTheme.graphiteInk.opacity(0.12), lineWidth: 0.6))
             }
-            .buttonStyle(.bordered)
-
-            Button("Restart") {
-                gameState.restartPlay()
-            }
-            .buttonStyle(.bordered)
-
-            Button("Help") {
-                showHelp = true
-            }
-            .buttonStyle(.bordered)
-
-            Spacer()
+            .buttonStyle(.plain)
+            .offset(y: -14)
         }
-        .padding(.horizontal, 24)
-        .tint(AppTheme.royalPurple)
     }
 
     private var setupFooter: some View {
@@ -132,7 +216,9 @@ struct GameView: View {
             .buttonStyle(.borderedProminent)
             .disabled(gameState.dots.count < gameState.minSetupDots)
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(AppTheme.paperSecondary.opacity(0.68), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .tint(AppTheme.royalPurple)
     }
 
@@ -150,17 +236,33 @@ struct GameView: View {
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.graphiteInk.opacity(0.58))
 
+            Button(modeSelection == 1 ? "Need help?" : "Check moves") {
+                checkMovesTapped()
+            }
+            .buttonStyle(.bordered)
+            .tint(AppTheme.royalPurple.opacity(0.86))
+            .disabled(gameState.winner != nil || gameState.flowState != .play)
+
             Spacer()
             
             if let winner = gameState.winner {
-                Text("\(winner.title) wins")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(AppTheme.royalPurple.opacity(0.16), in: Capsule())
+                HStack(spacing: 8) {
+                    Text("\(winner.title) wins")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(AppTheme.royalPurple.opacity(0.16), in: Capsule())
+
+                    Button("Paint the Match 🎨") {
+                        showPaintMatch = true
+                    }
+                    .buttonStyle(.bordered)
+                }
             }
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(AppTheme.paperSecondary.opacity(0.68), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var helpSheet: some View {
@@ -197,6 +299,29 @@ struct GameView: View {
         case .placeNewDot:
             return "Phase B: tap line to place new dot"
         }
+    }
+
+    private func checkMovesTapped() {
+        guard gameState.flowState == .play, gameState.winner == nil else { return }
+
+        let hasLegalMove = RulesEngine.hasAnyLegalMove(
+            gameState: gameState,
+            profile: gameState.geometryProfile
+        )
+
+        if hasLegalMove {
+            interactionState.showInvalid("A move may still exist.")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                interactionState.hideFeedback()
+            }
+        } else {
+            // Manual check: winner is last valid mover, i.e. opposite of current player.
+            gameState.winner = previousPlayer
+        }
+    }
+
+    private var previousPlayer: Player {
+        gameState.currentPlayer == .one ? .two : .one
     }
 }
 
