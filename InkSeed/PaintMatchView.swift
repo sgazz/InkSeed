@@ -106,8 +106,7 @@ struct PaintMatchView: View {
                             .background(.ultraThinMaterial, in: Capsule())
                         Spacer()
                         Button("Done") { dismiss() }
-                            .buttonStyle(.bordered)
-                            .tint(AppTheme.graphiteInk.opacity(0.3))
+                            .buttonStyle(InkSeedSecondaryButtonStyle())
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
@@ -117,7 +116,7 @@ struct PaintMatchView: View {
                     HStack(alignment: .bottom, spacing: 14) {
                         HStack(spacing: 10) {
                             Button("Undo") { _ = fills.popLast() }
-                                .buttonStyle(.bordered)
+                                .buttonStyle(InkSeedSecondaryButtonStyle())
                                 .disabled(fills.isEmpty)
                             Button("Clear") {
                                 withAnimation(.easeOut(duration: 0.2)) {
@@ -125,12 +124,9 @@ struct PaintMatchView: View {
                                     fillRevealProgressByID.removeAll()
                                 }
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(InkSeedSecondaryButtonStyle())
                             .disabled(fills.isEmpty)
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(.ultraThinMaterial, in: Capsule())
 
                         Spacer(minLength: 8)
 
@@ -139,15 +135,6 @@ struct PaintMatchView: View {
                             .padding(.vertical, 8)
                             .background(.ultraThinMaterial, in: Capsule())
 
-                        Spacer(minLength: 8)
-
-                        HStack(spacing: 10) {
-                            Button("Save Artwork") { saveArtworkToPhotos() }
-                                .buttonStyle(.borderedProminent)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(.ultraThinMaterial, in: Capsule())
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 18)

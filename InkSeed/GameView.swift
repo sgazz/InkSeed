@@ -81,24 +81,18 @@ struct GameView: View {
                 Button {
                     selectOrientation(.portrait)
                 } label: {
-                    orientationDeviceCard(
-                        title: "Portrait",
-                        systemImage: "ipad",
-                        isSelected: selectedPlayOrientation == .portrait
-                    )
+                    Label("Portrait", systemImage: "ipad")
+                        .frame(width: 168)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor, minimumHeight: 52))
 
                 Button {
                     selectOrientation(.landscape)
                 } label: {
-                    orientationDeviceCard(
-                        title: "Landscape",
-                        systemImage: "ipad.landscape",
-                        isSelected: selectedPlayOrientation == .landscape
-                    )
+                    Label("Landscape", systemImage: "ipad.landscape")
+                        .frame(width: 168)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor, minimumHeight: 52))
             }
             .padding(.top, 8)
 
@@ -163,15 +157,14 @@ struct GameView: View {
                                 .font(.system(size: isPadScale ? 29 : 22, weight: .semibold, design: .rounded))
                                 .frame(width: ctaWidth, height: ctaHeight)
                         }
-                        .buttonStyle(PremiumLaunchButtonStyle(accent: AppTheme.royalPurple))
+                        .buttonStyle(InkSeedPrimaryButtonStyle(accent: AppTheme.royalPurple, minimumHeight: ctaHeight))
                         .opacity(welcomeCTAOpacity)
                         .offset(y: welcomeCTAOffset)
 
                         Button("Change Orientation") {
                             selectedPlayOrientation = nil
                         }
-                        .buttonStyle(.bordered)
-                        .tint(currentAccentColor.opacity(0.8))
+                        .buttonStyle(InkSeedSecondaryButtonStyle())
                         .opacity(welcomeCTAOpacity)
                     }
                     Spacer()
@@ -238,19 +231,17 @@ struct GameView: View {
                 Button("New Game") {
                     startNewMatch()
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor))
 
                 Button("Restart") {
                     gameState.restartPlay()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(InkSeedSecondaryButtonStyle())
 
                 Button("?") {
                     showHelp = true
                 }
-                .buttonStyle(.bordered)
-                .tint(currentAccentColor.opacity(0.26))
-                .foregroundStyle(AppTheme.graphiteInk.opacity(0.8))
+                .buttonStyle(InkSeedCompactButtonStyle())
             }
 
             Spacer()
@@ -272,12 +263,9 @@ struct GameView: View {
                 InkSeedThemeGlyph(isDark: prefersDarkTheme)
                     .frame(width: 18, height: 18)
             }
-            .buttonStyle(.bordered)
-            .tint(currentAccentColor.opacity(0.26))
-            .foregroundStyle(AppTheme.graphiteInk.opacity(0.8))
+            .buttonStyle(InkSeedCompactButtonStyle())
         }
         .padding(.horizontal, 12)
-        .tint(currentAccentColor)
     }
 
     private var bottomBar: some View {
@@ -320,13 +308,13 @@ struct GameView: View {
             Button("Undo") {
                 gameState.removeLastSetupDot()
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(InkSeedSecondaryButtonStyle())
             .disabled(gameState.dots.isEmpty)
 
             Button("Start Drawing") {
                 gameState.finalizeSetupIfPossible()
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor))
             .disabled(gameState.dots.count < gameState.minSetupDots)
         }
         .padding(.horizontal, 14)
@@ -363,8 +351,7 @@ struct GameView: View {
                 Button(modeSelection == 1 ? "Need help?" : "Check moves") {
                     checkMovesTapped()
                 }
-                .buttonStyle(.bordered)
-                .tint(currentAccentColor.opacity(0.9))
+                .buttonStyle(InkSeedSecondaryButtonStyle())
                 .disabled(gameState.winner != nil || gameState.flowState != .play)
 
                 if let winner = gameState.winner {
@@ -383,9 +370,7 @@ struct GameView: View {
                         Label("Paint the Match", systemImage: "paintpalette.fill")
                             .font(.subheadline.weight(.semibold))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(currentAccentColor)
-                    .foregroundStyle(.white)
+                    .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor))
                 }
             }
         }
@@ -418,8 +403,7 @@ struct GameView: View {
                                     Button("↻") {
                                         helpReplaySeed[card.id, default: 0] += 1
                                     }
-                                    .buttonStyle(.bordered)
-                                    .tint(currentAccentColor.opacity(0.8))
+                                    .buttonStyle(InkSeedCompactButtonStyle())
                                 }
                             }
 
@@ -466,6 +450,7 @@ struct GameView: View {
                     Button("Let's Draw!") {
                         showHelp = false
                     }
+                    .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor))
                 }
             }
         }
@@ -660,34 +645,6 @@ struct GameView: View {
         }
     }
 
-    private func orientationDeviceCard(
-        title: String,
-        systemImage: String,
-        isSelected: Bool
-    ) -> some View {
-        VStack(spacing: 10) {
-            Image(systemName: systemImage)
-                .font(.system(size: 34, weight: .regular))
-                .foregroundStyle(AppTheme.graphiteInk.opacity(0.9))
-
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(AppTheme.graphiteInk.opacity(0.92))
-        }
-        .frame(width: 138, height: 118)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(AppTheme.paperSecondary.opacity(0.88))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(
-                    isSelected ? currentAccentColor.opacity(0.9) : AppTheme.graphiteInk.opacity(0.12),
-                    lineWidth: isSelected ? 2.0 : 1.0
-                )
-        )
-        .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 3)
-    }
 }
 
 private enum PlayOrientation: Equatable {
@@ -883,5 +840,309 @@ private struct HelpMiniDemoView: View {
             withAnimation(.easeInOut(duration: 0.55).delay(1.7)) { p2 = 1 }
             withAnimation(.easeInOut(duration: 0.45).delay(2.2)) { p3 = 1 }
         }
+    }
+}
+
+// MARK: - InkSeed Button Styles
+
+struct InkSeedPrimaryButtonStyle: ButtonStyle {
+    let accent: Color
+    var minimumHeight: CGFloat = 46
+
+    func makeBody(configuration: Configuration) -> some View {
+        InkSeedNodeFrameButtonBody(
+            configuration: configuration,
+            variant: .primary(accent: accent),
+            minimumHeight: minimumHeight
+        )
+    }
+}
+
+struct InkSeedSecondaryButtonStyle: ButtonStyle {
+    var minimumHeight: CGFloat = 44
+
+    func makeBody(configuration: Configuration) -> some View {
+        InkSeedNodeFrameButtonBody(
+            configuration: configuration,
+            variant: .secondary,
+            minimumHeight: minimumHeight
+        )
+    }
+}
+
+struct InkSeedCompactButtonStyle: ButtonStyle {
+    var minimumSize: CGFloat = 36
+
+    func makeBody(configuration: Configuration) -> some View {
+        InkSeedNodeFrameButtonBody(
+            configuration: configuration,
+            variant: .compact,
+            minimumHeight: minimumSize,
+            forceSquare: true
+        )
+    }
+}
+
+private struct InkSeedNodeFrameButtonBody: View {
+    enum Variant {
+        case primary(accent: Color)
+        case secondary
+        case compact
+    }
+
+    let configuration: ButtonStyle.Configuration
+    let variant: Variant
+    let minimumHeight: CGFloat
+    var forceSquare: Bool = false
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        configuration.label
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(foregroundColor)
+            .padding(.horizontal, forceSquare ? 10 : 22)
+            .padding(.vertical, forceSquare ? 8 : 11)
+            .frame(minWidth: forceSquare ? minimumHeight : nil)
+            .frame(minHeight: minimumHeight)
+            .background(frameBackground)
+            .overlay(
+                InkSeedNodeFrame(
+                    color: frameColor,
+                    glowColor: glowColor,
+                    isDashed: !isEnabled,
+                    emphasized: configuration.isPressed && isEnabled,
+                    nodeDiameter: forceSquare ? 7.2 : 8
+                )
+            )
+            .scaleEffect(configuration.isPressed && isEnabled ? 0.97 : 1)
+            .shadow(color: elevatedShadowPrimary.color, radius: elevatedShadowPrimary.radius, x: 0, y: elevatedShadowPrimary.y)
+            .shadow(color: elevatedShadowSecondary.color, radius: elevatedShadowSecondary.radius, x: 0, y: elevatedShadowSecondary.y)
+            .shadow(color: ambientGlow.color, radius: ambientGlow.radius, x: 0, y: ambientGlow.y)
+            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
+    }
+
+    private var frameBackground: some View {
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .fill(backgroundColor)
+    }
+
+    private var frameColor: Color {
+        if !isEnabled { return AppTheme.graphiteInk.opacity(0.26) }
+        switch variant {
+        case .primary(let accent):
+            return accent.opacity(configuration.isPressed ? 1 : 0.92)
+        case .secondary:
+            if colorScheme == .dark {
+                return .white.opacity(configuration.isPressed ? 0.88 : 0.74)
+            } else {
+                return AppTheme.graphiteInk.opacity(configuration.isPressed ? 0.84 : 0.68)
+            }
+        case .compact:
+            if colorScheme == .dark {
+                return .white.opacity(configuration.isPressed ? 0.9 : 0.76)
+            } else {
+                return AppTheme.graphiteInk.opacity(configuration.isPressed ? 0.88 : 0.72)
+            }
+        }
+    }
+
+    private var foregroundColor: Color {
+        if !isEnabled { return AppTheme.graphiteInk.opacity(0.45) }
+        switch variant {
+        case .primary(let accent):
+            return colorScheme == .dark ? .white.opacity(0.97) : accent.opacity(0.97)
+        case .secondary:
+            return colorScheme == .dark ? .white.opacity(0.9) : AppTheme.graphiteInk.opacity(0.92)
+        case .compact:
+            return colorScheme == .dark ? .white.opacity(0.92) : AppTheme.graphiteInk.opacity(0.9)
+        }
+    }
+
+    private var backgroundColor: Color {
+        if !isEnabled { return .clear }
+        switch variant {
+        case .primary(let accent):
+            let baseOpacity: CGFloat = configuration.isPressed ? 0.08 : 0.055
+            return accent.opacity(colorScheme == .dark ? max(baseOpacity, 0.07) : baseOpacity)
+        case .secondary:
+            return (colorScheme == .dark ? Color.white : AppTheme.graphiteInk)
+                .opacity(configuration.isPressed ? 0.05 : 0.0)
+        case .compact:
+            return (colorScheme == .dark ? Color.white : AppTheme.graphiteInk)
+                .opacity(configuration.isPressed ? 0.05 : 0.0)
+        }
+    }
+
+    private var glowColor: Color {
+        if !isEnabled { return .clear }
+        switch variant {
+        case .primary(let accent):
+            return accent.opacity(colorScheme == .dark ? 0.34 : 0.16)
+        case .secondary:
+            return .clear
+        case .compact:
+            return .clear
+        }
+    }
+
+    private var pressFactor: CGFloat {
+        configuration.isPressed && isEnabled ? 0.55 : 1
+    }
+
+    private var elevatedShadowPrimary: (color: Color, radius: CGFloat, y: CGFloat) {
+        guard isEnabled else { return (.clear, 0, 0) }
+        switch variant {
+        case .primary(let accent):
+            if colorScheme == .dark {
+                return (.black.opacity(0.28 * pressFactor), 12, 5)
+            } else {
+                return (.black.opacity(0.08 * pressFactor), 12, 6)
+            }
+        case .secondary:
+            return (.black.opacity((colorScheme == .dark ? 0.14 : 0.05) * pressFactor), 6, 3)
+        case .compact:
+            return (.black.opacity((colorScheme == .dark ? 0.12 : 0.04) * pressFactor), 5, 2.5)
+        }
+    }
+
+    private var elevatedShadowSecondary: (color: Color, radius: CGFloat, y: CGFloat) {
+        guard isEnabled else { return (.clear, 0, 0) }
+        switch variant {
+        case .primary:
+            if colorScheme == .dark {
+                return (.black.opacity(0.14 * pressFactor), 7, 2.5)
+            } else {
+                return (.white.opacity(0.24 * pressFactor), 4, 0.8)
+            }
+        case .secondary:
+            return (.white.opacity((colorScheme == .dark ? 0.08 : 0.14) * pressFactor), 2.5, 0.3)
+        case .compact:
+            return (.white.opacity((colorScheme == .dark ? 0.06 : 0.12) * pressFactor), 2.0, 0.2)
+        }
+    }
+
+    private var ambientGlow: (color: Color, radius: CGFloat, y: CGFloat) {
+        guard isEnabled else { return (.clear, 0, 0) }
+        switch variant {
+        case .primary(let accent):
+            if colorScheme == .dark {
+                return (accent.opacity(0.22 * pressFactor), 10, 0)
+            } else {
+                return (accent.opacity(0.1 * pressFactor), 6, 0)
+            }
+        case .secondary, .compact:
+            return (.clear, 0, 0)
+        }
+    }
+}
+
+private struct InkSeedNodeFrame: View {
+    let color: Color
+    let glowColor: Color
+    let isDashed: Bool
+    let emphasized: Bool
+    let nodeDiameter: CGFloat
+
+    var body: some View {
+        GeometryReader { proxy in
+            let padX: CGFloat = 12
+            let padY: CGFloat = 8
+            let leftX = padX
+            let rightX = proxy.size.width - padX
+            let topY = padY
+            let bottomY = proxy.size.height - padY
+            let curve: CGFloat = emphasized ? 3.8 : 2.7
+
+            Path { path in
+                path.move(to: CGPoint(x: leftX, y: topY))
+                path.addQuadCurve(
+                    to: CGPoint(x: rightX, y: topY),
+                    control: CGPoint(x: proxy.size.width * 0.5, y: topY - curve)
+                )
+            }
+            .stroke(
+                color,
+                style: StrokeStyle(
+                    lineWidth: emphasized ? 1.9 : 1.5,
+                    lineCap: .round,
+                    lineJoin: .round,
+                    dash: isDashed ? [4, 3] : []
+                )
+            )
+
+            Path { path in
+                path.move(to: CGPoint(x: leftX, y: bottomY))
+                path.addQuadCurve(
+                    to: CGPoint(x: rightX, y: bottomY),
+                    control: CGPoint(x: proxy.size.width * 0.5, y: bottomY + curve)
+                )
+            }
+            .stroke(
+                color,
+                style: StrokeStyle(
+                    lineWidth: emphasized ? 1.9 : 1.5,
+                    lineCap: .round,
+                    lineJoin: .round,
+                    dash: isDashed ? [4, 3] : []
+                )
+            )
+
+            Path { path in
+                path.move(to: CGPoint(x: leftX, y: topY))
+                path.addQuadCurve(
+                    to: CGPoint(x: leftX, y: bottomY),
+                    control: CGPoint(x: leftX - curve * 0.45, y: proxy.size.height * 0.5)
+                )
+            }
+            .stroke(
+                color,
+                style: StrokeStyle(
+                    lineWidth: emphasized ? 1.8 : 1.4,
+                    lineCap: .round,
+                    lineJoin: .round,
+                    dash: isDashed ? [4, 3] : []
+                )
+            )
+
+            Path { path in
+                path.move(to: CGPoint(x: rightX, y: topY))
+                path.addQuadCurve(
+                    to: CGPoint(x: rightX, y: bottomY),
+                    control: CGPoint(x: rightX + curve * 0.45, y: proxy.size.height * 0.5)
+                )
+            }
+            .stroke(
+                color,
+                style: StrokeStyle(
+                    lineWidth: emphasized ? 1.8 : 1.4,
+                    lineCap: .round,
+                    lineJoin: .round,
+                    dash: isDashed ? [4, 3] : []
+                )
+            )
+
+            cornerNode(at: CGPoint(x: leftX, y: topY))
+            cornerNode(at: CGPoint(x: rightX, y: topY))
+            cornerNode(at: CGPoint(x: leftX, y: bottomY))
+            cornerNode(at: CGPoint(x: rightX, y: bottomY))
+        }
+        .allowsHitTesting(false)
+    }
+
+    private func cornerNode(at point: CGPoint) -> some View {
+        ZStack {
+            Circle()
+                .fill(glowColor.opacity(emphasized ? 0.95 : 0))
+                .frame(width: nodeDiameter + 6, height: nodeDiameter + 6)
+            Circle()
+                .stroke(color, lineWidth: emphasized ? 1.8 : 1.4)
+                .frame(width: nodeDiameter, height: nodeDiameter)
+            Circle()
+                .fill(color.opacity(emphasized ? 0.35 : 0.2))
+                .frame(width: nodeDiameter * 0.24, height: nodeDiameter * 0.24)
+                .offset(x: -nodeDiameter * 0.14, y: -nodeDiameter * 0.14)
+        }
+        .position(point)
     }
 }
