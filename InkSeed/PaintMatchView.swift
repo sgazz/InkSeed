@@ -12,8 +12,6 @@ struct PaintMatchView: View {
 
     @State private var selectedColorIndex = 0
     @State private var fills: [PaintFillRegion] = []
-    @State private var showShareSheet = false
-    @State private var shareItems: [Any] = []
     @State private var statusMessage: String?
     @State private var canvasSize: CGSize = CGSize(width: 900, height: 600)
     @State private var fillRevealProgressByID: [UUID: CGFloat] = [:]
@@ -146,12 +144,6 @@ struct PaintMatchView: View {
                         HStack(spacing: 10) {
                             Button("Save Artwork") { saveArtworkToPhotos() }
                                 .buttonStyle(.borderedProminent)
-                            Button("Share") {
-                                let image = renderArtworkImage(size: canvasSize)
-                                shareItems = [image]
-                                showShareSheet = true
-                            }
-                            .buttonStyle(.bordered)
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
@@ -182,9 +174,6 @@ struct PaintMatchView: View {
             }
         }
         .background(AppTheme.paperBackground)
-        .sheet(isPresented: $showShareSheet) {
-            ShareSheet(items: shareItems)
-        }
         .overlay(alignment: .top) {
             if let statusMessage {
                 Text(statusMessage)
@@ -254,45 +243,6 @@ struct PaintMatchView: View {
         .padding(.vertical, 4)
     }
 
-    private var controlsBar: some View {
-        HStack(alignment: .center, spacing: 14) {
-            HStack(spacing: 10) {
-                Button("Undo") {
-                    _ = fills.popLast()
-                }
-                .buttonStyle(.bordered)
-                .disabled(fills.isEmpty)
-
-                Button("Clear") {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        fills.removeAll()
-                        fillRevealProgressByID.removeAll()
-                    }
-                }
-                .buttonStyle(.bordered)
-                .disabled(fills.isEmpty)
-            }
-
-            Spacer(minLength: 8)
-            paletteBar
-            Spacer(minLength: 8)
-
-            HStack(spacing: 10) {
-                Button("Save Artwork") {
-                    saveArtworkToPhotos()
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button("Share") {
-                    let image = renderArtworkImage(size: canvasSize)
-                    shareItems = [image]
-                    showShareSheet = true
-                }
-                .buttonStyle(.bordered)
-            }
-        }
-    }
-
     private func drawFill(_ fill: PaintFillRegion, in context: inout GraphicsContext, layout: PaintBoardLayout) {
         let cellSize = layout.cellSize
         let reveal = fillRevealProgressByID[fill.id] ?? 1
@@ -332,7 +282,7 @@ struct PaintMatchView: View {
                 PHAssetChangeRequest.creationRequestForAsset(from: image)
             }) { success, _ in
                 DispatchQueue.main.async {
-                    showTransientStatus(success ? "Saved to Photos" : "Save failed")
+                    showTransientStatus(success ? "Saved to Photos. You can share it from Photos." : "Save failed")
                 }
             }
         }
@@ -340,7 +290,12 @@ struct PaintMatchView: View {
 
     private func renderArtworkImage(size: CGSize) -> UIImage {
         let renderSize = CGSize(width: max(2200, size.width), height: max(1500, size.height))
-        let layout = PaintBoardLayout(size: renderSize, edges: edges, dots: dots)
+        let layout = PaintBoardLayout(
+            size: renderSize,
+            edges: edges,
+            dots: dots,
+            reservedInsets: boardReservedInsets(for: renderSize)
+        )
         let projectedEdges = layout.projectedTrimmedEdges(nodeRadius: 7)
         let projectedDots = layout.projectedDots
         let format = UIGraphicsImageRendererFormat()
@@ -909,12 +864,3 @@ private enum PaintRegionDetector {
     }
 }
 
-private struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
