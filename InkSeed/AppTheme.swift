@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum ThemeMode: Int {
     case premium
@@ -50,15 +51,34 @@ enum AppTheme {
 
     // Backward compatibility: existing callsites stay functional.
     private static let premium = palette(for: .premium)
-    static let paperBackground = premium.background
-    static let paperSecondary = premium.secondaryBackground
-    static let graphiteInk = premium.ink
-    static let royalPurple = premium.accent
-    static let playerOneUndertone = premium.playerOne
-    static let playerTwoUndertone = premium.playerTwo
+    static let paperBackground = dynamicColor(light: Color(hex: 0xF6F2E8), dark: Color(hex: 0x0C0D10))
+    static let paperSecondary = dynamicColor(light: Color(hex: 0xEFE9DC), dark: Color(hex: 0x17191E))
+    static let graphiteInk = dynamicColor(light: premium.ink, dark: Color(hex: 0xF2EEE6))
+    static let royalPurple = dynamicColor(light: premium.accent, dark: Color(hex: 0x6E4CE6))
+    static let warmOrange = dynamicColor(light: Color(hex: 0xF4A261), dark: Color(hex: 0xF4A261))
+    // Per-player line palette for readable board history.
+    static let playerOneUndertone = dynamicColor(light: Color(hex: 0xD98C5F), dark: Color(hex: 0xF4A261))
+    static let playerTwoUndertone = dynamicColor(light: Color(hex: 0x5D8F8B), dark: Color(hex: 0x64C2B8))
     static let juniorCoral = palette(for: .junior).playerOne
     static let juniorMint = palette(for: .junior).playerTwo
     static let juniorSky = palette(for: .junior).accent
+
+    // Board-specific dark styling: graphite surface with subtle center lift.
+    static let boardBase = dynamicColor(light: Color(hex: 0xF6F2E8), dark: Color(hex: 0x17191E))
+    static let boardHighlight = dynamicColor(light: Color(hex: 0xEFE9DC), dark: Color(hex: 0x20232A))
+
+    // Gameplay state colors (dark mode tuned, light untouched).
+    static let pendingValid = dynamicColor(light: Color(hex: 0x7C3AED), dark: Color(hex: 0x66D1FF))
+    static let invalidPreview = dynamicColor(light: Color(hex: 0xC84E4E), dark: Color(hex: 0xFF6B6B))
+    static let newNodePulse = dynamicColor(light: Color(hex: 0x7C3AED), dark: Color(hex: 0xFFD166))
+
+    private static func dynamicColor(light: Color, dark: Color) -> Color {
+        Color(
+            uiColor: UIColor { trait in
+                trait.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light)
+            }
+        )
+    }
 }
 
 extension Color {

@@ -15,12 +15,15 @@ enum SplashDurationPreset {
 }
 
 struct InkSeedLogoSymbol: View {
+    @Environment(\.colorScheme) private var colorScheme
     var firstSegmentProgress: CGFloat = 1
     var secondSegmentProgress: CGFloat = 1
     var leftNodeScale: CGFloat = 1
     var middleNodeScale: CGFloat = 1
     var rightNodeScale: CGFloat = 1
     var accentOpacity: CGFloat = 0.18
+    var useAccentMiddleNode: Bool = false
+    var reducedAccent: Bool = false
 
     var body: some View {
         ZStack {
@@ -55,8 +58,17 @@ struct InkSeedLogoSymbol: View {
                 .position(x: 18, y: 26)
                 .scaleEffect(leftNodeScale)
 
+            if useAccentMiddleNode {
+                Circle()
+                    .fill(middleNodeAccentColor.opacity(reducedAccent ? 0.16 : 0.2))
+                    .frame(width: reducedAccent ? 17 : 19, height: reducedAccent ? 17 : 19)
+                    .position(x: 66, y: 33)
+                    .blur(radius: reducedAccent ? 2.6 : 3.4)
+                    .scaleEffect(middleNodeScale)
+            }
+
             Circle()
-                .stroke(AppTheme.graphiteInk.opacity(0.88), lineWidth: 1.7)
+                .stroke(useAccentMiddleNode ? middleNodeAccentColor.opacity(reducedAccent ? 0.82 : 0.96) : AppTheme.graphiteInk.opacity(0.88), lineWidth: 1.7)
                 .frame(width: 13, height: 13)
                 .position(x: 66, y: 33)
                 .scaleEffect(middleNodeScale)
@@ -68,6 +80,13 @@ struct InkSeedLogoSymbol: View {
                 .scaleEffect(rightNodeScale)
         }
         .frame(width: 132, height: 58)
+    }
+
+    private var middleNodeAccentColor: Color {
+        if colorScheme == .dark {
+            return Color(hex: 0xF4A261)
+        }
+        return Color(hex: 0x9D42F0)
     }
 }
 

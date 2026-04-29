@@ -1,11 +1,14 @@
 import SwiftUI
 
 struct BoardView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @ObservedObject var gameState: GameState
     @ObservedObject var interactionState: BoardInteractionState
+    let accentColor: Color
     @State private var settlingStrokePoints: [CGPoint] = []
     @State private var pulseDotID: UUID?
     @State private var pulseProgress: CGFloat = 0
+    private let useMonochromeStrokeFallback = false
     
     private let nodeOuterDiameter: CGFloat = 12
     private let nodeStrokeWidth: CGFloat = 1.5
@@ -42,11 +45,11 @@ struct BoardView: View {
                         .font(.callout.weight(.medium))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
-                        .background(AppTheme.paperBackground.opacity(0.92), in: Capsule())
+                        .background(AppTheme.paperBackground.opacity(0.94), in: Capsule())
                         .overlay(
-                            Capsule().stroke(AppTheme.graphiteInk.opacity(0.12), lineWidth: 0.8)
+                            Capsule().stroke(AppTheme.invalidPreview.opacity(colorScheme == .dark ? 0.52 : 0.2), lineWidth: 0.9)
                         )
-                        .foregroundStyle(AppTheme.graphiteInk.opacity(0.85))
+                        .foregroundStyle(colorScheme == .dark ? AppTheme.invalidPreview : AppTheme.graphiteInk.opacity(0.85))
                         .transition(.opacity.combined(with: .scale))
                         .padding(.top, proxy.safeAreaInsets.top + 18)
                         .frame(maxHeight: .infinity, alignment: .top)
@@ -55,7 +58,7 @@ struct BoardView: View {
             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(AppTheme.graphiteInk.opacity(0.08), lineWidth: 1)
+                    .stroke(colorScheme == .dark ? .white.opacity(0.08) : AppTheme.graphiteInk.opacity(0.08), lineWidth: 1)
             )
             .animation(.easeOut(duration: 0.2), value: interactionState.showFeedback)
             .onChange(of: gameState.lastInsertedDotID) { _, newValue in
@@ -79,20 +82,20 @@ struct BoardView: View {
         RoundedRectangle(cornerRadius: 28, style: .continuous)
             .fill(
                 LinearGradient(
-                    colors: [AppTheme.paperBackground, AppTheme.paperSecondary],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+                    colors: [AppTheme.boardBase, AppTheme.boardBase],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
             )
             .overlay(
                 RadialGradient(
                     colors: [
-                        .white.opacity(0.12),
+                        AppTheme.boardHighlight.opacity(0.72),
                         .clear
                     ],
-                    center: .topLeading,
-                    startRadius: 20,
-                    endRadius: 560
+                    center: .center,
+                    startRadius: 8,
+                    endRadius: 520
                 )
             )
             .overlay(paperGrainOverlay)
@@ -108,7 +111,7 @@ struct BoardView: View {
                 let dot = CGRect(x: x, y: y, width: 0.9, height: 0.9)
                 context.fill(
                     Path(ellipseIn: dot),
-                    with: .color(AppTheme.graphiteInk.opacity(0.028))
+                    with: .color(AppTheme.graphiteInk.opacity(0.025))
                 )
             }
 
@@ -127,7 +130,7 @@ struct BoardView: View {
                 fiber.addLine(to: CGPoint(x: x + dx, y: y + dy))
                 context.stroke(
                     fiber,
-                    with: .color(.white.opacity(0.03)),
+                    with: .color(.white.opacity(0.022)),
                     style: StrokeStyle(lineWidth: 0.5, lineCap: .round)
                 )
             }
@@ -149,7 +152,7 @@ struct BoardView: View {
                 drawInkStroke(
                     in: &context,
                     points: trimmed,
-                    undertone: edge.owner == .one ? AppTheme.playerOneUndertone : AppTheme.playerTwoUndertone,
+                    undertone: strokeColor(for: edge.owner),
                     baseWidth: 3.5,
                     phase: edge.inkPhase
                 )
@@ -163,7 +166,7 @@ struct BoardView: View {
             let path = smoothPath(from: interactionState.liveStrokePoints)
             context.stroke(
                 path,
-                with: .color(AppTheme.graphiteInk.opacity(0.5)),
+                with: .color(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.76 : 0.5)),
                 style: StrokeStyle(lineWidth: 3.2, lineCap: .round, lineJoin: .round)
             )
         }
@@ -175,7 +178,7 @@ struct BoardView: View {
             drawInkStroke(
                 in: &context,
                 points: settlingStrokePoints,
-                undertone: gameState.currentPlayer == .one ? AppTheme.playerOneUndertone : AppTheme.playerTwoUndertone,
+                undertone: strokeColor(for: gameState.currentPlayer),
                 baseWidth: 3.45,
                 phase: 0
             )
@@ -188,7 +191,7 @@ struct BoardView: View {
             let path = smoothPath(from: pending.stroke.points)
             context.stroke(
                 path,
-                with: .color(AppTheme.royalPurple.opacity(0.25)),
+                with: .color(accentColor.opacity(colorScheme == .dark ? 0.92 : 0.28)),
                 style: StrokeStyle(lineWidth: 4.4, lineCap: .round, lineJoin: .round, dash: [7, 6])
             )
         }
@@ -216,23 +219,32 @@ struct BoardView: View {
                 // Minimal depth for a refined board-piece read.
                 context.fill(
                     Path(ellipseIn: outerRect.offsetBy(dx: 0, dy: 0.55)),
-                    with: .color(AppTheme.graphiteInk.opacity(0.07))
+                    with: .color(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.11 : 0.07))
                 )
 
-                // Selected node gets a subtle royal purple outer glow ring.
+                // Selected node gets a subtle accent outer glow ring.
                 if isSelected {
                     let glowRect = outerRect.insetBy(dx: -2.1, dy: -2.1)
                     context.stroke(
                         Path(ellipseIn: glowRect),
-                        with: .color(AppTheme.royalPurple.opacity(0.42)),
+                        with: .color(accentColor.opacity(0.42)),
                         style: StrokeStyle(lineWidth: 1.7, lineCap: .round, lineJoin: .round)
+                    )
+                }
+
+                if colorScheme == .dark {
+                    let ambientGlowRect = outerRect.insetBy(dx: -1.2, dy: -1.2)
+                    context.stroke(
+                        Path(ellipseIn: ambientGlowRect),
+                        with: .color(.white.opacity(0.12)),
+                        style: StrokeStyle(lineWidth: 0.8, lineCap: .round, lineJoin: .round)
                     )
                 }
 
                 // Hollow circular node ring.
                 context.stroke(
                     Path(ellipseIn: outerRect),
-                    with: .color(AppTheme.graphiteInk.opacity(isAtFullDegree ? 0.86 : 0.72)),
+                    with: .color(AppTheme.graphiteInk.opacity(isAtFullDegree ? 0.9 : (colorScheme == .dark ? 0.86 : 0.72))),
                     style: StrokeStyle(lineWidth: nodeStrokeWidth, lineCap: .round, lineJoin: .round)
                 )
 
@@ -259,7 +271,7 @@ struct BoardView: View {
                     // Soft spawn pulse.
                     context.stroke(
                         Path(ellipseIn: pulseRect),
-                        with: .color(AppTheme.royalPurple.opacity(0.24 * (1 - pulseProgress))),
+                        with: .color(accentColor.opacity((colorScheme == .dark ? 0.6 : 0.26) * (1 - pulseProgress))),
                         style: StrokeStyle(lineWidth: 1.15, lineCap: .round, lineJoin: .round)
                     )
                 }
@@ -403,12 +415,12 @@ struct BoardView: View {
         let path = smoothPath(from: points)
         context.stroke(
             path,
-            with: .color(undertone.opacity(0.24)),
+            with: .color(undertone.opacity(colorScheme == .dark ? 0.28 : 0.22)),
             style: StrokeStyle(lineWidth: baseWidth + 0.95, lineCap: .round, lineJoin: .round)
         )
         context.stroke(
             path,
-            with: .color(AppTheme.graphiteInk.opacity(0.9)),
+            with: .color(undertone.opacity(colorScheme == .dark ? 0.94 : 0.9)),
             style: StrokeStyle(lineWidth: baseWidth, lineCap: .round, lineJoin: .round)
         )
 
@@ -420,10 +432,15 @@ struct BoardView: View {
             let width = max(baseWidth - 0.4, min(baseWidth + 0.4, baseWidth + modulation))
             context.stroke(
                 segmentPath,
-                with: .color(AppTheme.graphiteInk.opacity(0.18)),
+                with: .color(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.1 : 0.14)),
                 style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round)
             )
         }
+    }
+
+    private func strokeColor(for player: Player) -> Color {
+        if useMonochromeStrokeFallback { return AppTheme.graphiteInk }
+        return player == .one ? AppTheme.playerOneUndertone : AppTheme.playerTwoUndertone
     }
 
     private func pseudoRandom(_ value: CGFloat) -> CGFloat {
