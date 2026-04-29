@@ -41,7 +41,7 @@ struct GameView: View {
         .sheet(isPresented: $showHelp) {
             helpSheet
         }
-        .sheet(isPresented: $showPaintMatch) {
+        .fullScreenCover(isPresented: $showPaintMatch) {
             PaintMatchView(
                 edges: gameState.edges,
                 dots: gameState.dots,
@@ -449,7 +449,7 @@ struct GameView: View {
     }
 
     private var currentAccentColor: Color {
-        modeSelection == 1 ? AppTheme.warmOrange : AppTheme.royalPurple
+        AppTheme.warmOrange
     }
 
     private func playerColor(for player: Player) -> Color {
