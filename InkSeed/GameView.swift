@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct GameView: View {
     @Environment(\.colorScheme) private var colorScheme
@@ -26,16 +27,21 @@ struct GameView: View {
     @State private var welcomeDidAnimate = false
     @State private var expandedHelpCardID: String?
     @State private var helpReplaySeed: [String: Int] = [:]
+    @State private var selectedPlayOrientation: PlayOrientation?
 
     var body: some View {
         ZStack {
             AppTheme.paperBackground.ignoresSafeArea()
 
-            switch gameState.flowState {
-            case .welcome:
-                welcomeView
-            case .setup, .play:
-                gameSurface
+            if selectedPlayOrientation == nil {
+                orientationChoiceView
+            } else {
+                switch gameState.flowState {
+                case .welcome:
+                    welcomeView
+                case .setup, .play:
+                    gameSurface
+                }
             }
         }
         .sheet(isPresented: $showHelp) {
@@ -49,6 +55,56 @@ struct GameView: View {
             )
         }
         .preferredColorScheme(prefersDarkTheme ? .dark : .light)
+        .onAppear {
+            applyOrientationLockForSelection()
+        }
+        .onChange(of: selectedPlayOrientation) { _, _ in
+            applyOrientationLockForSelection()
+        }
+    }
+
+    private var orientationChoiceView: some View {
+        VStack(spacing: 18) {
+            Spacer()
+
+            Text("Choose your play space")
+                .font(.system(size: 36, weight: .semibold, design: .rounded))
+                .foregroundStyle(AppTheme.graphiteInk.opacity(0.96))
+
+            Text("InkSeed works best when the board stays still.")
+                .font(.title3)
+                .foregroundStyle(secondaryTextColor)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
+
+            HStack(spacing: 14) {
+                Button {
+                    selectOrientation(.portrait)
+                } label: {
+                    orientationDeviceCard(
+                        title: "Portrait",
+                        systemImage: "ipad",
+                        isSelected: selectedPlayOrientation == .portrait
+                    )
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    selectOrientation(.landscape)
+                } label: {
+                    orientationDeviceCard(
+                        title: "Landscape",
+                        systemImage: "ipad.landscape",
+                        isSelected: selectedPlayOrientation == .landscape
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 8)
+
+            Spacer()
+        }
+        .padding(24)
     }
 
     private var welcomeView: some View {
@@ -101,7 +157,7 @@ struct GameView: View {
 
                     VStack(spacing: isPadScale ? 16 : 10) {
                         Button {
-                            gameState.startNewGame()
+                            startNewMatch()
                         } label: {
                             Text("Start Drawing")
                                 .font(.system(size: isPadScale ? 29 : 22, weight: .semibold, design: .rounded))
@@ -110,6 +166,13 @@ struct GameView: View {
                         .buttonStyle(PremiumLaunchButtonStyle(accent: AppTheme.royalPurple))
                         .opacity(welcomeCTAOpacity)
                         .offset(y: welcomeCTAOffset)
+
+                        Button("Change Orientation") {
+                            selectedPlayOrientation = nil
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(currentAccentColor.opacity(0.8))
+                        .opacity(welcomeCTAOpacity)
                     }
                     Spacer()
                 }
@@ -173,7 +236,7 @@ struct GameView: View {
         HStack(spacing: 10) {
             HStack(spacing: 10) {
                 Button("New Game") {
-                    gameState.startNewGame()
+                    startNewMatch()
                 }
                 .buttonStyle(.borderedProminent)
 
@@ -574,6 +637,70 @@ struct GameView: View {
     private func pseudoRandom(_ value: CGFloat) -> CGFloat {
         let raw = sin(value * 12.9898) * 43758.5453
         return raw - floor(raw)
+    }
+
+    private func startNewMatch() {
+        applyOrientationLockForSelection()
+        gameState.startNewGame()
+    }
+
+    private func applyOrientationLockForSelection() {
+        guard let selectedPlayOrientation else {
+            OrientationAppDelegate.updateOrientationLock(.allButUpsideDown)
+            return
+        }
+        OrientationAppDelegate.updateOrientationLock(selectedPlayOrientation.interfaceMask)
+    }
+
+    private func selectOrientation(_ orientation: PlayOrientation) {
+        selectedPlayOrientation = orientation
+        applyOrientationLockForSelection()
+        if gameState.flowState != .welcome {
+            gameState.enterWelcome()
+        }
+    }
+
+    private func orientationDeviceCard(
+        title: String,
+        systemImage: String,
+        isSelected: Bool
+    ) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.system(size: 34, weight: .regular))
+                .foregroundStyle(AppTheme.graphiteInk.opacity(0.9))
+
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.graphiteInk.opacity(0.92))
+        }
+        .frame(width: 138, height: 118)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(AppTheme.paperSecondary.opacity(0.88))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(
+                    isSelected ? currentAccentColor.opacity(0.9) : AppTheme.graphiteInk.opacity(0.12),
+                    lineWidth: isSelected ? 2.0 : 1.0
+                )
+        )
+        .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 3)
+    }
+}
+
+private enum PlayOrientation: Equatable {
+    case portrait
+    case landscape
+
+    var interfaceMask: UIInterfaceOrientationMask {
+        switch self {
+        case .portrait:
+            return .portrait
+        case .landscape:
+            return .landscape
+        }
     }
 }
 
