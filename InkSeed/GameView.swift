@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct GameView: View {
     @Environment(\.colorScheme) private var colorScheme
@@ -26,22 +27,27 @@ struct GameView: View {
     @State private var welcomeDidAnimate = false
     @State private var expandedHelpCardID: String?
     @State private var helpReplaySeed: [String: Int] = [:]
+    @State private var selectedPlayOrientation: PlayOrientation?
 
     var body: some View {
         ZStack {
             AppTheme.paperBackground.ignoresSafeArea()
 
-            switch gameState.flowState {
-            case .welcome:
-                welcomeView
-            case .setup, .play:
-                gameSurface
+            if selectedPlayOrientation == nil {
+                orientationChoiceView
+            } else {
+                switch gameState.flowState {
+                case .welcome:
+                    welcomeView
+                case .setup, .play:
+                    gameSurface
+                }
             }
         }
         .sheet(isPresented: $showHelp) {
             helpSheet
         }
-        .sheet(isPresented: $showPaintMatch) {
+        .fullScreenCover(isPresented: $showPaintMatch) {
             PaintMatchView(
                 edges: gameState.edges,
                 dots: gameState.dots,
@@ -49,6 +55,50 @@ struct GameView: View {
             )
         }
         .preferredColorScheme(prefersDarkTheme ? .dark : .light)
+        .onAppear {
+            applyOrientationLockForSelection()
+        }
+        .onChange(of: selectedPlayOrientation) { _, _ in
+            applyOrientationLockForSelection()
+        }
+    }
+
+    private var orientationChoiceView: some View {
+        VStack(spacing: 18) {
+            Spacer()
+
+            Text(L10n.t("orientation.choose_play_space"))
+                .font(.system(size: 36, weight: .semibold, design: .rounded))
+                .foregroundStyle(AppTheme.graphiteInk.opacity(0.96))
+
+            Text(L10n.t("orientation.board_stays_still_hint"))
+                .font(.title3)
+                .foregroundStyle(secondaryTextColor)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
+
+            HStack(spacing: 14) {
+                Button {
+                    selectOrientation(.portrait)
+                } label: {
+                    Label(L10n.t("orientation.portrait"), systemImage: "ipad")
+                        .frame(width: 168)
+                }
+                .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor, minimumHeight: 52, showsBackground: false))
+
+                Button {
+                    selectOrientation(.landscape)
+                } label: {
+                    Label(L10n.t("orientation.landscape"), systemImage: "ipad.landscape")
+                        .frame(width: 168)
+                }
+                .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor, minimumHeight: 52, showsBackground: false))
+            }
+            .padding(.top, 8)
+
+            Spacer()
+        }
+        .padding(24)
     }
 
     private var welcomeView: some View {
@@ -82,17 +132,17 @@ struct GameView: View {
                         .padding(.bottom, isPadScale ? 12 : 6)
                         .opacity(welcomeLogoOpacity)
 
-                        Text("InkSeed")
+                        Text(L10n.t("welcome.brand_name"))
                             .font(.system(size: titleSize, weight: .semibold, design: .rounded))
                             .foregroundStyle(AppTheme.graphiteInk.opacity(0.98))
                             .opacity(welcomeTitleOpacity)
 
-                        Text("Calm strategy through drawing.")
+                        Text(L10n.t("welcome.subtitle"))
                             .font(.system(size: subtitleSize, weight: .regular, design: .rounded))
                             .foregroundStyle(secondaryTextColor)
                             .opacity(welcomeSubtitleOpacity)
 
-                        Text("Every move plants a possibility.")
+                        Text(L10n.t("welcome.tagline"))
                             .font(.system(size: taglineSize, weight: .regular, design: .serif))
                             .tracking(isPadScale ? 0.62 : 0.45)
                             .foregroundStyle(secondaryTextColor.opacity(0.88))
@@ -101,15 +151,21 @@ struct GameView: View {
 
                     VStack(spacing: isPadScale ? 16 : 10) {
                         Button {
-                            gameState.startNewGame()
+                            startNewMatch()
                         } label: {
-                            Text("Start Drawing")
+                            Text(L10n.t("action.start_drawing"))
                                 .font(.system(size: isPadScale ? 29 : 22, weight: .semibold, design: .rounded))
                                 .frame(width: ctaWidth, height: ctaHeight)
                         }
-                        .buttonStyle(PremiumLaunchButtonStyle(accent: AppTheme.royalPurple))
+                        .buttonStyle(InkSeedSecondaryButtonStyle(minimumHeight: ctaHeight))
                         .opacity(welcomeCTAOpacity)
                         .offset(y: welcomeCTAOffset)
+
+                        Button(L10n.t("action.change_orientation")) {
+                            selectedPlayOrientation = nil
+                        }
+                        .buttonStyle(InkSeedSecondaryButtonStyle())
+                        .opacity(welcomeCTAOpacity)
                     }
                     Spacer()
                 }
@@ -172,36 +228,24 @@ struct GameView: View {
     private var topBar: some View {
         HStack(spacing: 10) {
             HStack(spacing: 10) {
-                Button("New Game") {
-                    gameState.startNewGame()
+                Button(L10n.t("action.new_game")) {
+                    startNewMatch()
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor))
 
-                Button("Restart") {
-                    gameState.restartPlay()
+                Button(L10n.t("action.undo")) {
+                    undoTapped()
                 }
-                .buttonStyle(.bordered)
-
-                Button("?") {
-                    showHelp = true
-                }
-                .buttonStyle(.bordered)
-                .tint(currentAccentColor.opacity(0.26))
-                .foregroundStyle(AppTheme.graphiteInk.opacity(0.8))
+                .buttonStyle(InkSeedSecondaryButtonStyle())
+                .disabled(!canUndo)
             }
 
             Spacer()
 
-            InkSeedLogoSymbol()
-                .frame(width: 34, height: 16)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(
-                    Capsule().stroke(.white.opacity(colorScheme == .dark ? 0.18 : 0.38), lineWidth: 0.7)
-                )
-
-            Spacer()
+            Button("?") {
+                showHelp = true
+            }
+            .buttonStyle(InkSeedCompactButtonStyle())
 
             Button {
                 prefersDarkTheme.toggle()
@@ -209,12 +253,9 @@ struct GameView: View {
                 InkSeedThemeGlyph(isDark: prefersDarkTheme)
                     .frame(width: 18, height: 18)
             }
-            .buttonStyle(.bordered)
-            .tint(currentAccentColor.opacity(0.26))
-            .foregroundStyle(AppTheme.graphiteInk.opacity(0.8))
+            .buttonStyle(InkSeedCompactButtonStyle())
         }
         .padding(.horizontal, 12)
-        .tint(currentAccentColor)
     }
 
     private var bottomBar: some View {
@@ -246,84 +287,86 @@ struct GameView: View {
 
     private var setupFooter: some View {
         HStack(spacing: 14) {
-            Text("Place 3–6 dots to begin")
-                .font(.headline)
-                .foregroundStyle(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.9 : 0.75))
+            HStack(spacing: 10) {
+                Text(L10n.t("setup.place_dots_to_begin"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.92 : 0.82))
 
-            Text("\(gameState.dots.count)/\(gameState.maxSetupDots)")
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(secondaryTextColor)
-
-            Button("Undo") {
-                gameState.removeLastSetupDot()
+                Text("\(gameState.dots.count)/\(gameState.maxSetupDots)")
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(secondaryTextColor)
             }
-            .buttonStyle(.bordered)
-            .disabled(gameState.dots.isEmpty)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .frame(minHeight: 46)
+            .background(Color.clear)
+            .overlay(
+                InkSeedNodeFrame(
+                    color: colorScheme == .dark ? .white.opacity(0.8) : AppTheme.graphiteInk.opacity(0.74),
+                    glowColor: colorScheme == .dark ? AppTheme.warmHighlight.opacity(0.16) : AppTheme.graphiteInk.opacity(0.06),
+                    isDashed: false,
+                    emphasized: false,
+                    nodeDiameter: 8
+                )
+            )
 
-            Button("Start Drawing") {
+            Spacer(minLength: 8)
+
+            Button(L10n.t("action.start_drawing")) {
                 gameState.finalizeSetupIfPossible()
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(InkSeedSecondaryButtonStyle())
             .disabled(gameState.dots.count < gameState.minSetupDots)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(bottomBarBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(colorScheme == .dark ? .white.opacity(0.08) : .clear, lineWidth: 0.8)
-        }
         .tint(currentAccentColor)
     }
 
     private var playerFooter: some View {
-        HStack(spacing: 14) {
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(playerColor(for: gameState.currentPlayer))
-                    .frame(width: 12, height: 12)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Turn: \(gameState.currentPlayer.title)")
-                        .font(.headline)
-                        .foregroundStyle(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.95 : 0.8))
-
-                    Text(phaseHint)
-                        .font(.subheadline)
-                        .foregroundStyle(secondaryTextColor)
-                }
-            }
-
-            Spacer(minLength: 10)
-
-            HStack(spacing: 8) {
-                Button(modeSelection == 1 ? "Need help?" : "Check moves") {
-                    checkMovesTapped()
-                }
-                .buttonStyle(.bordered)
-                .tint(currentAccentColor.opacity(0.9))
-                .disabled(gameState.winner != nil || gameState.flowState != .play)
-
-                if let winner = gameState.winner {
-                    Text("\(winner.title) wins")
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, 11)
-                        .padding(.vertical, 6)
-                        .background(playerColor(for: winner).opacity(0.22), in: Capsule())
-                        .overlay(
-                            Capsule().stroke(playerColor(for: winner).opacity(0.42), lineWidth: 0.8)
-                        )
+        Group {
+            if let winner = gameState.winner {
+                VStack(spacing: 16) {
+                    InkSeedWinnerDisplay(text: L10n.f("result.player_wins_format", winner.title))
 
                     Button {
                         showPaintMatch = true
                     } label: {
-                        Label("Paint the Match", systemImage: "paintpalette.fill")
+                        Label(L10n.t("action.paint_the_match"), systemImage: "paintpalette.fill")
                             .font(.subheadline.weight(.semibold))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(currentAccentColor)
-                    .foregroundStyle(.white)
+                    .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor))
                 }
+                .frame(maxWidth: .infinity)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            } else {
+                HStack(alignment: .center, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 9) {
+                            Circle()
+                                .fill(playerColor(for: gameState.currentPlayer))
+                                .frame(width: 12, height: 12)
+
+                            Text(L10n.f("player.current_player_format", gameState.currentPlayer.title))
+                                .font(.headline)
+                                .foregroundStyle(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.95 : 0.8))
+                        }
+
+                        Text(phaseHint)
+                            .font(.subheadline)
+                            .foregroundStyle(secondaryTextColor)
+                    }
+
+                    Spacer(minLength: 24)
+
+                    Button(modeSelection == 1 ? L10n.t("action.hint") : L10n.t("action.check_moves")) {
+                        checkMovesTapped()
+                    }
+                    .buttonStyle(InkSeedSecondaryButtonStyle())
+                    .disabled(gameState.flowState != .play)
+                    .accessibilityLabel(modeSelection == 1 ? L10n.t("accessibility.show_hint") : L10n.t("action.check_moves"))
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(.horizontal, 14)
@@ -332,77 +375,125 @@ struct GameView: View {
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(colorScheme == .dark ? .white.opacity(0.08) : .clear, lineWidth: 0.8)
+        }
+        .animation(.easeInOut(duration: 0.24), value: gameState.winner != nil)
+    }
+
+    private struct InkSeedWinnerDisplay: View {
+        let text: String
+        @Environment(\.colorScheme) private var colorScheme
+
+        var body: some View {
+            Text(text)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(colorScheme == .dark ? .white.opacity(0.96) : AppTheme.graphiteInk.opacity(0.94))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .frame(minHeight: 52)
+                .background(Color.clear)
+                .overlay(
+                    InkSeedNodeFrame(
+                        color: frameColor,
+                        glowColor: glowColor,
+                        isDashed: false,
+                        emphasized: false,
+                        nodeDiameter: 8
+                    )
+                )
+                .shadow(color: .black.opacity(colorScheme == .dark ? 0.16 : 0.05), radius: 6, x: 0, y: 3)
+        }
+
+        private var frameColor: Color {
+            if colorScheme == .dark {
+                return .white.opacity(0.84)
+            } else {
+                return AppTheme.graphiteInk.opacity(0.8)
+            }
+        }
+
+        private var glowColor: Color {
+            colorScheme == .dark ? AppTheme.warmHighlight.opacity(0.2) : AppTheme.graphiteInk.opacity(0.06)
         }
     }
 
     private var helpSheet: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    ForEach(helpCards) { card in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 18) {
+                    ForEach(Array(helpCards.enumerated()), id: \.element.id) { index, card in
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(alignment: .top, spacing: 10) {
+                                HStack(spacing: 6) {
+                                    Circle()
+                                        .stroke(helpCardFrameColor(isExpanded: true), lineWidth: 1.4)
+                                        .frame(width: 12, height: 12)
+                                    Text("\(index + 1)")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(secondaryTextColor.opacity(0.94))
+                                }
+                                .padding(.top, 3)
+
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text(card.title)
                                         .font(.title3.weight(.semibold))
-                                        .foregroundStyle(AppTheme.graphiteInk.opacity(0.95))
+                                        .foregroundStyle(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.96 : 0.9))
                                     Text(card.description)
-                                        .font(.title3)
-                                        .foregroundStyle(secondaryTextColor.opacity(0.98))
+                                        .font(.subheadline)
+                                        .foregroundStyle(secondaryTextColor.opacity(0.96))
                                 }
                                 Spacer(minLength: 8)
-                                if expandedHelpCardID == card.id {
-                                    Button("↻") {
-                                        helpReplaySeed[card.id, default: 0] += 1
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .tint(currentAccentColor.opacity(0.8))
+                                Button("↻") {
+                                    helpReplaySeed[card.id, default: 0] += 1
                                 }
+                                .buttonStyle(InkSeedCompactButtonStyle())
                             }
 
-                            if expandedHelpCardID == card.id {
-                                HelpMiniDemoView(
-                                    demo: card.demo,
-                                    replaySeed: helpReplaySeed[card.id, default: 0],
-                                    accent: currentAccentColor,
-                                    isDark: colorScheme == .dark
-                                )
-                                .frame(height: 92)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                            }
+                            HelpMiniDemoView(
+                                demo: card.demo,
+                                replaySeed: helpReplaySeed[card.id, default: 0],
+                                accent: currentAccentColor,
+                                isDark: colorScheme == .dark
+                            )
+                            .frame(height: 92)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .background(helpCardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(
+                        .padding(.vertical, 15)
+                        .background(
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(colorScheme == .dark ? .white.opacity(0.08) : .clear, lineWidth: 0.8)
+                                .fill(
+                                    (colorScheme == .dark ? Color.white : AppTheme.graphiteInk)
+                                        .opacity(0.045)
+                                )
                         )
-                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.24 : 0.08), radius: 8, x: 0, y: 4)
+                        .overlay(
+                            InkSeedNodeFrame(
+                                color: helpCardFrameColor(isExpanded: true),
+                                glowColor: helpCardGlowColor(isExpanded: true),
+                                isDashed: false,
+                                emphasized: true,
+                                nodeDiameter: 8
+                            )
+                        )
+                        .shadow(
+                            color: .black.opacity(colorScheme == .dark ? 0.28 : 0.08),
+                            radius: 9,
+                            x: 0,
+                            y: 5
+                        )
                         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .onTapGesture {
-                            withAnimation(.easeInOut(duration: 0.22)) {
-                                if expandedHelpCardID == card.id {
-                                    expandedHelpCardID = nil
-                                } else {
-                                    expandedHelpCardID = card.id
-                                    // Tap-to-open immediately restarts demo (no replay required).
-                                    helpReplaySeed[card.id, default: 0] += 1
-                                }
-                            }
-                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(24)
             }
-            .navigationTitle("How to Play ✨")
+            .navigationTitle(L10n.t("help.title"))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Let's Draw!") {
+                    Button(L10n.t("action.lets_draw")) {
                         showHelp = false
                     }
+                    .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor))
                 }
             }
         }
@@ -411,9 +502,9 @@ struct GameView: View {
     private var phaseHint: String {
         switch gameState.turnPhase {
         case .drawLine:
-            return "Phase A: draw line"
+            return L10n.t("phase.draw_line")
         case .placeNewDot:
-            return "Phase B: tap line to place new dot"
+            return L10n.t("phase.tap_line_place_dot")
         }
     }
 
@@ -426,7 +517,7 @@ struct GameView: View {
         )
 
         if hasLegalMove {
-            interactionState.showInvalid("A move may still exist.")
+            interactionState.showInvalid(L10n.t("feedback.move_may_still_exist"))
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 interactionState.hideFeedback()
             }
@@ -440,36 +531,74 @@ struct GameView: View {
         gameState.currentPlayer == .one ? .two : .one
     }
 
+    private var canUndo: Bool {
+        switch gameState.flowState {
+        case .welcome:
+            return false
+        case .setup:
+            return !gameState.dots.isEmpty
+        case .play:
+            return gameState.turnPhase == .placeNewDot && gameState.pendingMove != nil
+        }
+    }
+
+    private func undoTapped() {
+        switch gameState.flowState {
+        case .welcome:
+            break
+        case .setup:
+            gameState.removeLastSetupDot()
+        case .play:
+            // UI-level undo during play cancels the current in-progress move before commit.
+            if gameState.turnPhase == .placeNewDot, gameState.pendingMove != nil {
+                gameState.clearPendingMove()
+            }
+        }
+    }
+
     private var secondaryTextColor: Color {
         colorScheme == .dark ? Color(hex: 0xB9B2A8).opacity(0.96) : AppTheme.graphiteInk.opacity(0.62)
     }
 
     private var bottomBarBackground: Color {
-        colorScheme == .dark ? Color(hex: 0x17191E, alpha: 0.96) : AppTheme.paperSecondary.opacity(0.68)
+        colorScheme == .dark ? AppTheme.darkSurface.opacity(0.96) : AppTheme.paperSecondary.opacity(0.68)
     }
 
     private var currentAccentColor: Color {
-        modeSelection == 1 ? AppTheme.warmOrange : AppTheme.royalPurple
+        colorScheme == .dark ? AppTheme.warmHighlight : AppTheme.graphiteInk.opacity(0.86)
     }
 
     private func playerColor(for player: Player) -> Color {
         player == .one ? AppTheme.playerOneUndertone : AppTheme.playerTwoUndertone
     }
 
-    private var helpCardBackground: Color {
-        colorScheme == .dark ? Color(hex: 0x1F2228, alpha: 0.96) : Color(hex: 0xF8EFE1, alpha: 0.92)
-    }
-
     private var helpCards: [HelpCard] {
         [
-            HelpCard(id: "place", title: "1️⃣ Place Dots", description: "Put 3–6 dots anywhere.", demo: .placeDots),
-            HelpCard(id: "draw", title: "2️⃣ Draw a Line", description: "Connect two dots.", demo: .drawLine),
-            HelpCard(id: "newdot", title: "3️⃣ Add New Dot", description: "Tap the line to grow the board.", demo: .addDot),
-            HelpCard(id: "max3", title: "4️⃣ Max 3 Links", description: "Each dot can have up to 3 connections.", demo: .maxLinks),
-            HelpCard(id: "cross", title: "5️⃣ No Crossing", description: "Lines cannot cross.", demo: .noCrossing),
-            HelpCard(id: "finish", title: "6️⃣ Finish the Match", description: "When no moves remain, winner appears.", demo: .finishMatch),
-            HelpCard(id: "bonus", title: "🎨 Bonus", description: "After the match, paint the spaces and make art.", demo: .paintBonus)
+            HelpCard(id: "place", title: L10n.t("help.card.place_dots.title"), description: L10n.t("help.card.place_dots.description"), demo: .placeDots),
+            HelpCard(id: "draw", title: L10n.t("help.card.draw_line.title"), description: L10n.t("help.card.draw_line.description"), demo: .drawLine),
+            HelpCard(id: "newdot", title: L10n.t("help.card.add_dot.title"), description: L10n.t("help.card.add_dot.description"), demo: .addDot),
+            HelpCard(id: "max3", title: L10n.t("help.card.max_links.title"), description: L10n.t("help.card.max_links.description"), demo: .maxLinks),
+            HelpCard(id: "cross", title: L10n.t("help.card.no_crossing.title"), description: L10n.t("help.card.no_crossing.description"), demo: .noCrossing),
+            HelpCard(id: "finish", title: L10n.t("help.card.finish_match.title"), description: L10n.t("help.card.finish_match.description"), demo: .finishMatch),
+            HelpCard(id: "bonus", title: L10n.t("help.card.bonus.title"), description: L10n.t("help.card.bonus.description"), demo: .paintBonus)
         ]
+    }
+
+    private func helpCardFrameColor(isExpanded: Bool) -> Color {
+        if colorScheme == .dark {
+            return .white.opacity(isExpanded ? 0.9 : 0.78)
+        } else {
+            return AppTheme.graphiteInk.opacity(isExpanded ? 0.88 : 0.72)
+        }
+    }
+
+    private func helpCardGlowColor(isExpanded: Bool) -> Color {
+        guard isExpanded else { return .clear }
+        if colorScheme == .dark {
+            return AppTheme.warmHighlight.opacity(0.2)
+        } else {
+            return AppTheme.graphiteInk.opacity(0.08)
+        }
     }
 
     private var welcomeBackground: some View {
@@ -575,6 +704,42 @@ struct GameView: View {
         let raw = sin(value * 12.9898) * 43758.5453
         return raw - floor(raw)
     }
+
+    private func startNewMatch() {
+        applyOrientationLockForSelection()
+        gameState.startNewGame()
+    }
+
+    private func applyOrientationLockForSelection() {
+        guard let selectedPlayOrientation else {
+            OrientationAppDelegate.updateOrientationLock(.allButUpsideDown)
+            return
+        }
+        OrientationAppDelegate.updateOrientationLock(selectedPlayOrientation.interfaceMask)
+    }
+
+    private func selectOrientation(_ orientation: PlayOrientation) {
+        selectedPlayOrientation = orientation
+        applyOrientationLockForSelection()
+        if gameState.flowState != .welcome {
+            gameState.enterWelcome()
+        }
+    }
+
+}
+
+private enum PlayOrientation: Equatable {
+    case portrait
+    case landscape
+
+    var interfaceMask: UIInterfaceOrientationMask {
+        switch self {
+        case .portrait:
+            return .portrait
+        case .landscape:
+            return .landscape
+        }
+    }
 }
 
 #Preview {
@@ -670,7 +835,7 @@ private struct HelpMiniDemoView: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill((isDark ? Color(hex: 0x17191E) : .white).opacity(isDark ? 0.92 : 0.9))
+                .fill((isDark ? AppTheme.darkSurface : .white).opacity(isDark ? 0.92 : 0.9))
             Canvas { context, size in
                 let ink = isDark ? Color(hex: 0xF2EEE6) : Color(hex: 0x2A2A2A)
                 switch demo {
@@ -710,7 +875,7 @@ private struct HelpMiniDemoView: View {
                         drawDot(context: &context, at: t, scale: 1, color: ink)
                     }
                     var reject = Path(); reject.move(to: c); reject.addLine(to: CGPoint(x: size.width * 0.82, y: size.height * 0.74))
-                    context.stroke(reject, with: .color(Color(hex: 0xFF6B6B).opacity(p1)), style: .init(lineWidth: 2, lineCap: .round, dash: [4, 3]))
+                    context.stroke(reject, with: .color(AppTheme.dangerAccent.opacity(p1)), style: .init(lineWidth: 2, lineCap: .round, dash: [4, 3]))
                 case .noCrossing:
                     var base = Path()
                     base.move(to: CGPoint(x: size.width * 0.24, y: size.height * 0.72))
@@ -719,7 +884,7 @@ private struct HelpMiniDemoView: View {
                     var crossing = Path()
                     crossing.move(to: CGPoint(x: size.width * 0.24, y: size.height * 0.3))
                     crossing.addLine(to: CGPoint(x: size.width * 0.76, y: size.height * 0.72))
-                    context.stroke(crossing, with: .color(Color(hex: 0xFF6B6B).opacity(p1)), style: .init(lineWidth: 2, lineCap: .round, dash: [4, 3]))
+                    context.stroke(crossing, with: .color(AppTheme.dangerAccent.opacity(p1)), style: .init(lineWidth: 2, lineCap: .round, dash: [4, 3]))
                 case .finishMatch:
                     let badgeRect = CGRect(x: size.width * 0.35, y: size.height * 0.28, width: size.width * 0.3, height: size.height * 0.44)
                     context.fill(Path(roundedRect: badgeRect, cornerRadius: 10), with: .color(accent.opacity(0.2 * p1 + 0.05)))
@@ -756,5 +921,320 @@ private struct HelpMiniDemoView: View {
             withAnimation(.easeInOut(duration: 0.55).delay(1.7)) { p2 = 1 }
             withAnimation(.easeInOut(duration: 0.45).delay(2.2)) { p3 = 1 }
         }
+    }
+}
+
+// MARK: - InkSeed Button Styles
+
+struct InkSeedPrimaryButtonStyle: ButtonStyle {
+    let accent: Color
+    var minimumHeight: CGFloat = UIConstants.Button.defaultMinHeight
+    var showsBackground: Bool = true
+
+    func makeBody(configuration: Configuration) -> some View {
+        InkSeedNodeFrameButtonBody(
+            configuration: configuration,
+            variant: .primary(accent: accent, showsBackground: showsBackground),
+            minimumHeight: minimumHeight
+        )
+    }
+}
+
+struct InkSeedSecondaryButtonStyle: ButtonStyle {
+    var minimumHeight: CGFloat = UIConstants.Button.defaultMinHeight
+
+    func makeBody(configuration: Configuration) -> some View {
+        InkSeedNodeFrameButtonBody(
+            configuration: configuration,
+            variant: .secondary,
+            minimumHeight: minimumHeight
+        )
+    }
+}
+
+struct InkSeedCompactButtonStyle: ButtonStyle {
+    var minimumSize: CGFloat = UIConstants.Button.compactMinSize
+
+    func makeBody(configuration: Configuration) -> some View {
+        InkSeedNodeFrameButtonBody(
+            configuration: configuration,
+            variant: .compact,
+            minimumHeight: minimumSize,
+            forceSquare: true
+        )
+    }
+}
+
+private struct InkSeedNodeFrameButtonBody: View {
+    enum Variant {
+        case primary(accent: Color, showsBackground: Bool)
+        case secondary
+        case compact
+    }
+
+    let configuration: ButtonStyle.Configuration
+    let variant: Variant
+    let minimumHeight: CGFloat
+    var forceSquare: Bool = false
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        configuration.label
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(foregroundColor)
+            .padding(.horizontal, forceSquare ? UIConstants.Button.verticalPadding : UIConstants.Button.horizontalPadding)
+            .padding(.vertical, forceSquare ? 8 : UIConstants.Button.verticalPadding)
+            .frame(minWidth: forceSquare ? minimumHeight : nil)
+            .frame(minHeight: minimumHeight)
+            .background(frameBackground)
+            .overlay(
+                InkSeedNodeFrame(
+                    color: frameColor,
+                    glowColor: glowColor,
+                    isDashed: !isEnabled,
+                    emphasized: configuration.isPressed && isEnabled,
+                    nodeDiameter: forceSquare ? 7.2 : 8
+                )
+            )
+            .scaleEffect(configuration.isPressed && isEnabled ? 0.97 : 1)
+            .shadow(color: elevatedShadowPrimary.color, radius: elevatedShadowPrimary.radius, x: 0, y: elevatedShadowPrimary.y)
+            .shadow(color: elevatedShadowSecondary.color, radius: elevatedShadowSecondary.radius, x: 0, y: elevatedShadowSecondary.y)
+            .shadow(color: ambientGlow.color, radius: ambientGlow.radius, x: 0, y: ambientGlow.y)
+            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
+    }
+
+    private var frameBackground: some View {
+        RoundedRectangle(cornerRadius: UIConstants.Radius.buttonCorner, style: .continuous)
+            .fill(backgroundColor)
+    }
+
+    private var frameColor: Color {
+        if !isEnabled { return AppTheme.graphiteInk.opacity(0.26) }
+        switch variant {
+        case .primary:
+            if colorScheme == .dark {
+                return .white.opacity(configuration.isPressed ? 0.94 : 0.82)
+            } else {
+                return AppTheme.graphiteInk.opacity(configuration.isPressed ? 0.9 : 0.78)
+            }
+        case .secondary:
+            if colorScheme == .dark {
+                return .white.opacity(configuration.isPressed ? 0.88 : 0.74)
+            } else {
+                return AppTheme.graphiteInk.opacity(configuration.isPressed ? 0.84 : 0.68)
+            }
+        case .compact:
+            if colorScheme == .dark {
+                return .white.opacity(configuration.isPressed ? 0.9 : 0.76)
+            } else {
+                return AppTheme.graphiteInk.opacity(configuration.isPressed ? 0.88 : 0.72)
+            }
+        }
+    }
+
+    private var foregroundColor: Color {
+        if !isEnabled { return AppTheme.graphiteInk.opacity(0.45) }
+        switch variant {
+        case .primary:
+            return colorScheme == .dark ? .white.opacity(0.96) : AppTheme.graphiteInk.opacity(0.94)
+        case .secondary:
+            return colorScheme == .dark ? .white.opacity(0.9) : AppTheme.graphiteInk.opacity(0.92)
+        case .compact:
+            return colorScheme == .dark ? .white.opacity(0.92) : AppTheme.graphiteInk.opacity(0.9)
+        }
+    }
+
+    private var backgroundColor: Color {
+        if !isEnabled { return .clear }
+        switch variant {
+        case .primary(let accent, let showsBackground):
+            // Keep the node-line frame language, but remove filled interiors.
+            guard showsBackground else { return .clear }
+            let pressOpacity: CGFloat = colorScheme == .dark ? 0.035 : 0.025
+            return accent.opacity(configuration.isPressed ? pressOpacity : 0)
+        case .secondary:
+            return (colorScheme == .dark ? Color.white : AppTheme.graphiteInk)
+                .opacity(configuration.isPressed ? 0.03 : 0)
+        case .compact:
+            return (colorScheme == .dark ? Color.white : AppTheme.graphiteInk)
+                .opacity(configuration.isPressed ? 0.03 : 0)
+        }
+    }
+
+    private var glowColor: Color {
+        if !isEnabled { return .clear }
+        switch variant {
+        case .primary:
+            if colorScheme == .dark {
+                return AppTheme.warmHighlight.opacity(0.26)
+            } else {
+                return AppTheme.graphiteInk.opacity(0.08)
+            }
+        case .secondary:
+            return .clear
+        case .compact:
+            return .clear
+        }
+    }
+
+    private var pressFactor: CGFloat {
+        configuration.isPressed && isEnabled ? 0.55 : 1
+    }
+
+    private var elevatedShadowPrimary: (color: Color, radius: CGFloat, y: CGFloat) {
+        guard isEnabled else { return (.clear, 0, 0) }
+        switch variant {
+        case .primary:
+            if colorScheme == .dark {
+                return (.black.opacity(0.28 * pressFactor), 12, 5)
+            } else {
+                return (.black.opacity(0.08 * pressFactor), 12, 6)
+            }
+        case .secondary:
+            return (.black.opacity((colorScheme == .dark ? 0.14 : 0.05) * pressFactor), 6, 3)
+        case .compact:
+            return (.black.opacity((colorScheme == .dark ? 0.12 : 0.04) * pressFactor), 5, 2.5)
+        }
+    }
+
+    private var elevatedShadowSecondary: (color: Color, radius: CGFloat, y: CGFloat) {
+        guard isEnabled else { return (.clear, 0, 0) }
+        switch variant {
+        case .primary:
+            if colorScheme == .dark {
+                return (.black.opacity(0.14 * pressFactor), 7, 2.5)
+            } else {
+                return (.white.opacity(0.24 * pressFactor), 4, 0.8)
+            }
+        case .secondary:
+            return (.white.opacity((colorScheme == .dark ? 0.08 : 0.14) * pressFactor), 2.5, 0.3)
+        case .compact:
+            return (.white.opacity((colorScheme == .dark ? 0.06 : 0.12) * pressFactor), 2.0, 0.2)
+        }
+    }
+
+    private var ambientGlow: (color: Color, radius: CGFloat, y: CGFloat) {
+        guard isEnabled else { return (.clear, 0, 0) }
+        switch variant {
+        case .primary(let accent, _):
+            if colorScheme == .dark {
+                return (accent.opacity(0.22 * pressFactor), 10, 0)
+            } else {
+                return (accent.opacity(0.1 * pressFactor), 6, 0)
+            }
+        case .secondary, .compact:
+            return (.clear, 0, 0)
+        }
+    }
+}
+
+private struct InkSeedNodeFrame: View {
+    let color: Color
+    let glowColor: Color
+    let isDashed: Bool
+    let emphasized: Bool
+    let nodeDiameter: CGFloat
+
+    var body: some View {
+        GeometryReader { proxy in
+            let padX: CGFloat = 12
+            let padY: CGFloat = 8
+            let leftX = padX
+            let rightX = proxy.size.width - padX
+            let topY = padY
+            let bottomY = proxy.size.height - padY
+            let curve: CGFloat = emphasized ? 3.8 : 2.7
+
+            Path { path in
+                path.move(to: CGPoint(x: leftX, y: topY))
+                path.addQuadCurve(
+                    to: CGPoint(x: rightX, y: topY),
+                    control: CGPoint(x: proxy.size.width * 0.5, y: topY - curve)
+                )
+            }
+            .stroke(
+                color,
+                style: StrokeStyle(
+                    lineWidth: emphasized ? 1.9 : 1.5,
+                    lineCap: .round,
+                    lineJoin: .round,
+                    dash: isDashed ? [4, 3] : []
+                )
+            )
+
+            Path { path in
+                path.move(to: CGPoint(x: leftX, y: bottomY))
+                path.addQuadCurve(
+                    to: CGPoint(x: rightX, y: bottomY),
+                    control: CGPoint(x: proxy.size.width * 0.5, y: bottomY + curve)
+                )
+            }
+            .stroke(
+                color,
+                style: StrokeStyle(
+                    lineWidth: emphasized ? 1.9 : 1.5,
+                    lineCap: .round,
+                    lineJoin: .round,
+                    dash: isDashed ? [4, 3] : []
+                )
+            )
+
+            Path { path in
+                path.move(to: CGPoint(x: leftX, y: topY))
+                path.addQuadCurve(
+                    to: CGPoint(x: leftX, y: bottomY),
+                    control: CGPoint(x: leftX - curve * 0.45, y: proxy.size.height * 0.5)
+                )
+            }
+            .stroke(
+                color,
+                style: StrokeStyle(
+                    lineWidth: emphasized ? 1.8 : 1.4,
+                    lineCap: .round,
+                    lineJoin: .round,
+                    dash: isDashed ? [4, 3] : []
+                )
+            )
+
+            Path { path in
+                path.move(to: CGPoint(x: rightX, y: topY))
+                path.addQuadCurve(
+                    to: CGPoint(x: rightX, y: bottomY),
+                    control: CGPoint(x: rightX + curve * 0.45, y: proxy.size.height * 0.5)
+                )
+            }
+            .stroke(
+                color,
+                style: StrokeStyle(
+                    lineWidth: emphasized ? 1.8 : 1.4,
+                    lineCap: .round,
+                    lineJoin: .round,
+                    dash: isDashed ? [4, 3] : []
+                )
+            )
+
+            cornerNode(at: CGPoint(x: leftX, y: topY))
+            cornerNode(at: CGPoint(x: rightX, y: topY))
+            cornerNode(at: CGPoint(x: leftX, y: bottomY))
+            cornerNode(at: CGPoint(x: rightX, y: bottomY))
+        }
+        .allowsHitTesting(false)
+    }
+
+    private func cornerNode(at point: CGPoint) -> some View {
+        ZStack {
+            Circle()
+                .fill(glowColor.opacity(emphasized ? 0.95 : 0))
+                .frame(width: nodeDiameter + 6, height: nodeDiameter + 6)
+            Circle()
+                .stroke(color, lineWidth: emphasized ? 1.8 : 1.4)
+                .frame(width: nodeDiameter, height: nodeDiameter)
+            Circle()
+                .fill(color.opacity(emphasized ? 0.35 : 0.2))
+                .frame(width: nodeDiameter * 0.24, height: nodeDiameter * 0.24)
+                .offset(x: -nodeDiameter * 0.14, y: -nodeDiameter * 0.14)
+        }
+        .position(point)
     }
 }

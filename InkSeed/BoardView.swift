@@ -13,6 +13,8 @@ struct BoardView: View {
     private let nodeOuterDiameter: CGFloat = 12
     private let nodeStrokeWidth: CGFloat = 1.5
     private let nodeHitDiameter: CGFloat = 28
+    // Visual trim tuned to node ring + stroke footprint.
+    private var edgeTrimRadius: CGFloat { (nodeOuterDiameter * 0.5) + (nodeStrokeWidth * 0.35) }
 
     var body: some View {
         GeometryReader { proxy in
@@ -146,7 +148,7 @@ struct BoardView: View {
                     points: edge.points,
                     startDotID: edge.startDotID,
                     endDotID: edge.endDotID,
-                    nodeRadius: nodeOuterDiameter * 0.5
+                    nodeRadius: edgeTrimRadius
                 )
                 guard trimmed.count > 1 else { continue }
                 drawInkStroke(
@@ -287,7 +289,7 @@ struct BoardView: View {
             dots: gameState.dots,
             profile: gameState.geometryProfile
         ) else {
-            showInvalid("Kreni i završi potez bliže postojećim tačkama.")
+            showInvalid(NSLocalizedString("move_validation.start_and_end_closer_to_existing_dots", comment: "Instruction shown when user stroke does not start/end close enough to existing nodes"))
             return
         }
 
@@ -335,7 +337,7 @@ struct BoardView: View {
             stroke: pending.stroke,
             gameState: gameState
         ) else {
-            showInvalid("Tapni bliže liniji, ali ne preblizu postojećoj tački.")
+            showInvalid(NSLocalizedString("move_validation.tap_closer_to_line_not_existing_dot", comment: "Instruction shown when user tap is too far from line or too close to existing node"))
             return
         }
         
@@ -410,7 +412,7 @@ struct BoardView: View {
         points: [CGPoint],
         undertone: Color,
         baseWidth: CGFloat,
-        phase: CGFloat
+        phase _: CGFloat
     ) {
         let path = smoothPath(from: points)
         context.stroke(
@@ -423,19 +425,6 @@ struct BoardView: View {
             with: .color(undertone.opacity(colorScheme == .dark ? 0.94 : 0.9)),
             style: StrokeStyle(lineWidth: baseWidth, lineCap: .round, lineJoin: .round)
         )
-
-        for (index, segment) in zip(points.indices, zip(points, points.dropFirst())) {
-            var segmentPath = Path()
-            segmentPath.move(to: segment.0)
-            segmentPath.addLine(to: segment.1)
-            let modulation = sin(CGFloat(index) * 0.63 + phase) * 0.4
-            let width = max(baseWidth - 0.4, min(baseWidth + 0.4, baseWidth + modulation))
-            context.stroke(
-                segmentPath,
-                with: .color(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.1 : 0.14)),
-                style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round)
-            )
-        }
     }
 
     private func strokeColor(for player: Player) -> Color {
@@ -467,6 +456,7 @@ struct BoardView: View {
 
     private func trimFromStart(points: [CGPoint], center: CGPoint, radius: CGFloat) -> [CGPoint] {
         guard points.count > 1 else { return points }
+        let epsilon: CGFloat = 0.0001
         var result = points
         var scan = 0
         while scan < result.count - 1 {
@@ -485,8 +475,36 @@ struct BoardView: View {
                 result[scan] = boundary
                 return Array(result[scan...])
             }
+
+            // Fallback: robust circle-segment intersection when sampling doesn't expose a clean transition.
+            if da <= radius + epsilon,
+               let t = circleExitIntersectionT(from: a, to: b, center: center, radius: radius) {
+                let boundary = CGPoint(
+                    x: a.x + (b.x - a.x) * t,
+                    y: a.y + (b.y - a.y) * t
+                )
+                result[scan] = boundary
+                return Array(result[scan...])
+            }
             scan += 1
         }
+
+        // Best-effort visual fallback: if stroke starts inside node area, push start to ring boundary.
+        if let first = result.first, Geometry.distance(first, center) <= radius {
+            for candidate in result.dropFirst() {
+                let dx = candidate.x - center.x
+                let dy = candidate.y - center.y
+                let length = hypot(dx, dy)
+                guard length > epsilon else { continue }
+                let boundary = CGPoint(
+                    x: center.x + (dx / length) * radius,
+                    y: center.y + (dy / length) * radius
+                )
+                result[0] = boundary
+                return result
+            }
+        }
+
         return points
     }
 
@@ -494,5 +512,30 @@ struct BoardView: View {
         let reversed = Array(points.reversed())
         let trimmed = trimFromStart(points: reversed, center: center, radius: radius)
         return Array(trimmed.reversed())
+    }
+
+    private func circleExitIntersectionT(
+        from a: CGPoint,
+        to b: CGPoint,
+        center: CGPoint,
+        radius: CGFloat
+    ) -> CGFloat? {
+        let dx = b.x - a.x
+        let dy = b.y - a.y
+        let fx = a.x - center.x
+        let fy = a.y - center.y
+        let aCoeff = (dx * dx) + (dy * dy)
+        guard aCoeff > 0.0001 else { return nil }
+        let bCoeff = 2 * ((fx * dx) + (fy * dy))
+        let cCoeff = (fx * fx) + (fy * fy) - (radius * radius)
+        let discriminant = (bCoeff * bCoeff) - (4 * aCoeff * cCoeff)
+        guard discriminant >= 0 else { return nil }
+
+        let sqrtDisc = sqrt(discriminant)
+        let t1 = (-bCoeff - sqrtDisc) / (2 * aCoeff)
+        let t2 = (-bCoeff + sqrtDisc) / (2 * aCoeff)
+        let valid = [t1, t2].filter { $0 >= 0 && $0 <= 1 }
+        // For inside->outside exit, farther root is typically the correct boundary.
+        return valid.max()
     }
 }

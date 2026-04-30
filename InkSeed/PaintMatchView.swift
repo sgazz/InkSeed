@@ -3,6 +3,7 @@ import SwiftUI
 import UIKit
 
 struct PaintMatchView: View {
+    @Environment(\.colorScheme) private var colorScheme
     let edges: [EdgeModel]
     let dots: [DotModel]
     let isJuniorPalette: Bool
@@ -11,90 +12,154 @@ struct PaintMatchView: View {
 
     @State private var selectedColorIndex = 0
     @State private var fills: [PaintFillRegion] = []
-    @State private var showShareSheet = false
-    @State private var shareItems: [Any] = []
     @State private var statusMessage: String?
     @State private var canvasSize: CGSize = CGSize(width: 900, height: 600)
+    @State private var fillRevealProgressByID: [UUID: CGFloat] = [:]
+    @State private var studioAppear = false
 
     var body: some View {
-        VStack(spacing: 14) {
-            Text("Paint the Match 🎨")
-                .font(.title2.weight(.semibold))
+        GeometryReader { proxy in
+            ZStack {
+                GeometryReader { canvasProxy in
+                    let layout = PaintBoardLayout(
+                        size: canvasProxy.size,
+                        edges: edges,
+                        dots: dots,
+                        reservedInsets: boardReservedInsets(for: canvasProxy.size)
+                    )
+                    let projectedEdges = layout.projectedTrimmedEdges(nodeRadius: 7)
+                    let projectedDots = layout.projectedDots
 
-            GeometryReader { proxy in
-                let layout = PaintBoardLayout(size: proxy.size, edges: edges, dots: dots)
-                let projectedEdges = layout.projectedTrimmedEdges(nodeRadius: 7)
-                let projectedDots = layout.projectedDots
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(AppTheme.paperBackground)
 
-                ZStack {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(AppTheme.paperBackground)
+                        Canvas { context, _ in
+                            for fill in fills {
+                                drawFill(fill, in: &context, layout: layout)
+                            }
+                        }
 
-                    Canvas { context, _ in
-                        for fill in fills {
-                            drawFill(fill, in: &context, layout: layout)
+                        Canvas { context, _ in
+                            for edge in projectedEdges {
+                                guard let first = edge.first else { continue }
+                                var path = Path()
+                                path.move(to: first)
+                                path.addLines(edge)
+                                context.stroke(
+                                    path,
+                                    with: .color(AppTheme.graphiteInk.opacity(0.74)),
+                                    style: StrokeStyle(lineWidth: 3.35, lineCap: .round, lineJoin: .round)
+                                )
+                            }
+
+                            for dot in projectedDots {
+                                let rect = CGRect(x: dot.x - 7, y: dot.y - 7, width: 14, height: 14)
+                                context.stroke(
+                                    Path(ellipseIn: rect),
+                                    with: .color(AppTheme.graphiteInk.opacity(0.8)),
+                                    lineWidth: 2
+                                )
+                            }
                         }
                     }
-
-                    Canvas { context, _ in
-                        for edge in projectedEdges {
-                            guard let first = edge.first else { continue }
-                            var path = Path()
-                            path.move(to: first)
-                            path.addLines(edge)
-                            context.stroke(
-                                path,
-                                with: .color(AppTheme.graphiteInk.opacity(0.74)),
-                                style: StrokeStyle(lineWidth: 3.35, lineCap: .round, lineJoin: .round)
-                            )
-                        }
-
-                        for dot in projectedDots {
-                            let rect = CGRect(x: dot.x - 7, y: dot.y - 7, width: 14, height: 14)
-                            context.stroke(
-                                Path(ellipseIn: rect),
-                                with: .color(AppTheme.graphiteInk.opacity(0.8)),
-                                lineWidth: 2
-                            )
+                    .background(canvasCardBackground, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(colorScheme == .dark ? .white.opacity(0.08) : .clear, lineWidth: 0.9)
+                    )
+                    .shadow(color: .black.opacity(colorScheme == .dark ? 0.28 : 0.08), radius: 14, x: 0, y: 8)
+                    .contentShape(Rectangle())
+                    .onTapGesture { point in
+                        let palette = activePalette
+                        guard !palette.isEmpty else { return }
+                        let color = palette[min(selectedColorIndex, palette.count - 1)]
+                        let result = PaintRegionDetector.detectRegion(
+                            tap: point,
+                            layout: layout,
+                            existingFills: fills
+                        )
+                        switch result {
+                        case .filled(let region):
+                            let fill = PaintFillRegion(cells: region, color: color)
+                            fillRevealProgressByID[fill.id] = 0
+                            fills.append(fill)
+                            withAnimation(.easeInOut(duration: 0.38)) {
+                                fillRevealProgressByID[fill.id] = 1
+                            }
+                        case .rejected(let reason):
+                            if let message = rejectionMessage(for: reason) {
+                                showTransientStatus(message)
+                            }
                         }
                     }
                 }
-                .background(AppTheme.paperSecondary.opacity(0.62), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .contentShape(Rectangle())
-                .onTapGesture { point in
-                    let palette = activePalette
-                    guard !palette.isEmpty else { return }
-                    let color = palette[min(selectedColorIndex, palette.count - 1)]
-                    let result = PaintRegionDetector.detectRegion(
-                        tap: point,
-                        layout: layout,
-                        existingFills: fills
-                    )
-                    switch result {
-                    case .filled(let region):
-                        withAnimation(.easeOut(duration: 0.28)) {
-                            fills.append(PaintFillRegion(cells: region, color: color))
+                .padding(14)
+
+                VStack {
+                    HStack(spacing: 10) {
+                        Button(action: {}) {
+                            Text(L10n.t("paint.header"))
                         }
-                    case .rejected(let reason):
-                        if let message = rejectionMessage(for: reason) {
-                            showTransientStatus(message)
-                        }
+                        .buttonStyle(InkSeedSecondaryButtonStyle())
+                        .allowsHitTesting(false)
+                        Spacer()
+                        Button(L10n.t("action.done")) { dismiss() }
+                            .buttonStyle(InkSeedSecondaryButtonStyle())
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+
+                    Spacer()
+
+                    HStack(alignment: .bottom, spacing: 14) {
+                        HStack(spacing: 10) {
+                            Button(L10n.t("action.undo")) { _ = fills.popLast() }
+                                .buttonStyle(InkSeedSecondaryButtonStyle())
+                                .disabled(fills.isEmpty)
+                            Button(L10n.t("action.clear")) {
+                                withAnimation(.easeOut(duration: 0.2)) {
+                                    fills.removeAll()
+                                    fillRevealProgressByID.removeAll()
+                                }
+                            }
+                            .buttonStyle(InkSeedSecondaryButtonStyle())
+                            .disabled(fills.isEmpty)
+                        }
+
+                        Spacer(minLength: 8)
+
+                        paletteBar
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(.ultraThinMaterial, in: Capsule())
+
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 18)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: 500)
+            .frame(
+                width: min(proxy.size.width * 0.95, 1360),
+                height: min(proxy.size.height * 0.94, 1060)
+            )
+            .background(modalCardBackground, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(colorScheme == .dark ? .white.opacity(0.1) : .clear, lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 18, x: 0, y: 10)
+            .scaleEffect(studioAppear ? 1 : 0.965)
+            .opacity(studioAppear ? 1 : 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .onAppear {
                 canvasSize = CGSize(width: 2200, height: 1500)
+                withAnimation(.easeInOut(duration: 0.32)) {
+                    studioAppear = true
+                }
             }
-
-            paletteBar
-            controlsBar
         }
-        .padding(20)
         .background(AppTheme.paperBackground)
-        .sheet(isPresented: $showShareSheet) {
-            ShareSheet(items: shareItems)
-        }
         .overlay(alignment: .top) {
             if let statusMessage {
                 Text(statusMessage)
@@ -109,6 +174,10 @@ struct PaintMatchView: View {
     }
 
     private var activePalette: [Color] {
+        if colorScheme == .dark {
+            return AppTheme.publicDark.paintPalette
+        }
+
         if isJuniorPalette {
             return [
                 Color(hex: 0xFF6B6B),
@@ -119,28 +188,38 @@ struct PaintMatchView: View {
                 Color(hex: 0xD633B8)
             ]
         }
-        return [
-            Color(hex: 0xA77E58),
-            Color(hex: 0x5E7F63),
-            Color(hex: 0x6A89B8),
-            Color(hex: 0x8C6FA8),
-            Color(hex: 0xB5704A),
-            Color(hex: 0x4F8C88)
-        ]
+        return AppTheme.publicLight.paintPalette
     }
 
     private var fillOpacity: Double {
-        isJuniorPalette ? 0.68 : 0.54
+        if colorScheme == .dark {
+            return AppTheme.publicDark.paintFillOpacity
+        }
+        return isJuniorPalette ? 0.68 : 0.54
     }
 
     private var paletteBar: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 14) {
             ForEach(Array(activePalette.enumerated()), id: \.offset) { index, color in
                 Circle()
                     .fill(color)
-                    .frame(width: 26, height: 26)
+                    .frame(width: 34, height: 34)
+                    .shadow(
+                        color: selectedColorIndex == index
+                            ? color.opacity(colorScheme == .dark ? 0.78 : 0.28)
+                            : .clear,
+                        radius: selectedColorIndex == index ? (colorScheme == .dark ? 14 : 6) : 0,
+                        x: 0,
+                        y: 0
+                    )
                     .overlay(
-                        Circle().stroke(Color.white.opacity(selectedColorIndex == index ? 0.95 : 0), lineWidth: 2)
+                        Circle().stroke(AppTheme.graphiteInk.opacity(selectedColorIndex == index ? 0.95 : 0), lineWidth: 2.2)
+                    )
+                    .overlay(
+                        Circle().stroke(
+                            color.opacity(selectedColorIndex == index ? (colorScheme == .dark ? 0.92 : 0.5) : 0),
+                            lineWidth: selectedColorIndex == index ? 1.4 : 0
+                        )
                     )
                     .onTapGesture {
                         selectedColorIndex = index
@@ -150,43 +229,11 @@ struct PaintMatchView: View {
         .padding(.vertical, 4)
     }
 
-    private var controlsBar: some View {
-        HStack(spacing: 10) {
-            Button("Save") {
-                saveArtworkToPhotos()
-            }
-            .buttonStyle(.borderedProminent)
-
-            Button("Share") {
-                let image = renderArtworkImage(size: canvasSize)
-                shareItems = [image]
-                showShareSheet = true
-            }
-            .buttonStyle(.bordered)
-
-            Button("Undo") {
-                _ = fills.popLast()
-            }
-            .buttonStyle(.bordered)
-            .disabled(fills.isEmpty)
-
-            Button("Clear") {
-                withAnimation(.easeOut(duration: 0.2)) {
-                    fills.removeAll()
-                }
-            }
-            .buttonStyle(.bordered)
-            .disabled(fills.isEmpty)
-
-            Button("Done") {
-                dismiss()
-            }
-            .buttonStyle(.bordered)
-        }
-    }
-
     private func drawFill(_ fill: PaintFillRegion, in context: inout GraphicsContext, layout: PaintBoardLayout) {
         let cellSize = layout.cellSize
+        let reveal = fillRevealProgressByID[fill.id] ?? 1
+        let animatedOpacity = fillOpacity * (0.58 + (0.42 * reveal))
+        var regionPath = Path()
         for cell in fill.cells {
             let row = cell / layout.gridWidth
             let col = cell % layout.gridWidth
@@ -196,8 +243,16 @@ struct PaintMatchView: View {
                 width: cellSize + 0.2,
                 height: cellSize + 0.2
             )
-            context.fill(Path(rect), with: .color(fill.color.opacity(fillOpacity)))
+            regionPath.addRect(rect)
         }
+
+        if colorScheme == .dark {
+            var glowContext = context
+            glowContext.addFilter(.shadow(color: fill.color.opacity(0.42 * reveal), radius: 9, x: 0, y: 0))
+            glowContext.fill(regionPath, with: .color(fill.color.opacity(0.34 * reveal)))
+        }
+
+        context.fill(regionPath, with: .color(fill.color.opacity(animatedOpacity)))
     }
 
     private func saveArtworkToPhotos() {
@@ -205,7 +260,7 @@ struct PaintMatchView: View {
         PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
             guard status == .authorized || status == .limited else {
                 DispatchQueue.main.async {
-                    showTransientStatus("Photos permission needed")
+                    showTransientStatus(L10n.t("paint.photos_permission_needed"))
                 }
                 return
             }
@@ -213,7 +268,7 @@ struct PaintMatchView: View {
                 PHAssetChangeRequest.creationRequestForAsset(from: image)
             }) { success, _ in
                 DispatchQueue.main.async {
-                    showTransientStatus(success ? "Saved to Photos" : "Save failed")
+                    showTransientStatus(success ? L10n.t("paint.saved_to_photos") : L10n.t("paint.save_failed"))
                 }
             }
         }
@@ -221,7 +276,12 @@ struct PaintMatchView: View {
 
     private func renderArtworkImage(size: CGSize) -> UIImage {
         let renderSize = CGSize(width: max(2200, size.width), height: max(1500, size.height))
-        let layout = PaintBoardLayout(size: renderSize, edges: edges, dots: dots)
+        let layout = PaintBoardLayout(
+            size: renderSize,
+            edges: edges,
+            dots: dots,
+            reservedInsets: boardReservedInsets(for: renderSize)
+        )
         let projectedEdges = layout.projectedTrimmedEdges(nodeRadius: 7)
         let projectedDots = layout.projectedDots
         let format = UIGraphicsImageRendererFormat()
@@ -285,18 +345,37 @@ struct PaintMatchView: View {
     private func rejectionMessage(for reason: PaintRegionDetector.RejectionReason) -> String? {
         switch reason {
         case .tapOutsideBoard:
-            return "Tap inside the board"
+            return L10n.t("paint.rejection.tap_inside_board")
         case .alreadyFilled:
-            return "This area is already filled"
+            return L10n.t("paint.rejection.already_filled")
         case .openRegion:
-            return "Area edge is open"
+            return L10n.t("paint.rejection.open_region")
         case .openThroughGap:
-            return "Try tapping deeper inside the area"
+            return L10n.t("paint.rejection.open_through_gap")
         case .tooSmall:
-            return "Area is too small to fill"
+            return L10n.t("paint.rejection.too_small")
         case .blockedSeed:
             return nil
         }
+    }
+
+    private func boardReservedInsets(for size: CGSize) -> EdgeInsets {
+        // Keep overlay controls floating while maximizing drawable board area.
+        let isRoomy = size.width >= 900 || size.height >= 900
+        return EdgeInsets(
+            top: isRoomy ? 56 : 52,
+            leading: 18,
+            bottom: isRoomy ? 76 : 72,
+            trailing: 18
+        )
+    }
+
+    private var modalCardBackground: Color {
+        colorScheme == .dark ? AppTheme.darkModalSurface.opacity(0.97) : Color(hex: 0xF7F1E7, alpha: 0.98)
+    }
+
+    private var canvasCardBackground: Color {
+        colorScheme == .dark ? AppTheme.darkCanvasSurface.opacity(0.95) : AppTheme.paperSecondary.opacity(0.66)
     }
 }
 
@@ -310,8 +389,21 @@ private struct PaintBoardLayout {
     let size: CGSize
     let edges: [EdgeModel]
     let dots: [DotModel]
+    let reservedInsets: EdgeInsets
     let gridWidth = 240
     let gridHeight = 240
+
+    init(
+        size: CGSize,
+        edges: [EdgeModel],
+        dots: [DotModel],
+        reservedInsets: EdgeInsets = EdgeInsets()
+    ) {
+        self.size = size
+        self.edges = edges
+        self.dots = dots
+        self.reservedInsets = reservedInsets
+    }
 
     var cellSize: CGFloat {
         min(size.width / CGFloat(gridWidth), size.height / CGFloat(gridHeight))
@@ -327,6 +419,24 @@ private struct PaintBoardLayout {
         let width = max(1, maxX - minX)
         let height = max(1, maxY - minY)
         return CGRect(x: minX, y: minY, width: width, height: height)
+    }
+
+    private var paddedContentRect: CGRect {
+        let bounds = contentRect
+        let padX = max(48, bounds.width * 0.10)
+        let padY = max(48, bounds.height * 0.10)
+        return bounds.insetBy(dx: -padX, dy: -padY)
+    }
+
+    private var availableRect: CGRect {
+        let outerInset: CGFloat = 12
+        let base = CGRect(origin: .zero, size: size).insetBy(dx: outerInset, dy: outerInset)
+        return CGRect(
+            x: base.minX + reservedInsets.leading,
+            y: base.minY + reservedInsets.top,
+            width: max(1, base.width - reservedInsets.leading - reservedInsets.trailing),
+            height: max(1, base.height - reservedInsets.top - reservedInsets.bottom)
+        )
     }
 
     var projectedEdges: [[CGPoint]] {
@@ -354,16 +464,10 @@ private struct PaintBoardLayout {
     }
 
     var boardRect: CGRect {
-        let bounds = contentRect
-        let inset: CGFloat = 18
-        let target = CGRect(
-            x: inset,
-            y: inset,
-            width: max(1, size.width - inset * 2),
-            height: max(1, size.height - inset * 2)
-        )
-        let sx = target.width / bounds.width
-        let sy = target.height / bounds.height
+        let bounds = paddedContentRect
+        let target = availableRect
+        let sx = target.width / max(bounds.width, 1)
+        let sy = target.height / max(bounds.height, 1)
         let scale = min(sx, sy)
         let mappedWidth = bounds.width * scale
         let mappedHeight = bounds.height * scale
@@ -376,10 +480,10 @@ private struct PaintBoardLayout {
     }
 
     func project(_ point: CGPoint) -> CGPoint {
-        let bounds = contentRect
+        let bounds = paddedContentRect
         let target = boardRect
-        let sx = target.width / bounds.width
-        let sy = target.height / bounds.height
+        let sx = target.width / max(bounds.width, 1)
+        let sy = target.height / max(bounds.height, 1)
         let scale = min(sx, sy)
         let offsetX = target.midX - (bounds.midX * scale)
         let offsetY = target.midY - (bounds.midY * scale)
@@ -746,12 +850,3 @@ private enum PaintRegionDetector {
     }
 }
 
-private struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}

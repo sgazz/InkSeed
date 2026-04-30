@@ -118,13 +118,13 @@ struct InkSeedSplashView: View {
                 .opacity(showLeftNode ? 1 : 0)
 
                 VStack(spacing: 8) {
-                    Text("INKSEED")
+                    Text(L10n.t("splash.wordmark"))
                         .font(.system(size: 34, weight: .regular, design: .serif))
                         .tracking(7)
                         .foregroundStyle(AppTheme.graphiteInk.opacity(0.95))
                         .opacity(showWordmark ? 1 : 0)
 
-                    Text("Every move plants a possibility.")
+                    Text(L10n.t("welcome.tagline"))
                         .font(.system(size: 16, weight: .regular, design: .serif))
                         .tracking(0.6)
                         .foregroundStyle(AppTheme.graphiteInk.opacity(0.62))
