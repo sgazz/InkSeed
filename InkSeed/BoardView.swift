@@ -289,7 +289,7 @@ struct BoardView: View {
             dots: gameState.dots,
             profile: gameState.geometryProfile
         ) else {
-            showInvalid("Kreni i završi potez bliže postojećim tačkama.")
+            showInvalid(NSLocalizedString("move_validation.start_and_end_closer_to_existing_dots", comment: "Instruction shown when user stroke does not start/end close enough to existing nodes"))
             return
         }
 
@@ -337,7 +337,7 @@ struct BoardView: View {
             stroke: pending.stroke,
             gameState: gameState
         ) else {
-            showInvalid("Tapni bliže liniji, ali ne preblizu postojećoj tački.")
+            showInvalid(NSLocalizedString("move_validation.tap_closer_to_line_not_existing_dot", comment: "Instruction shown when user tap is too far from line or too close to existing node"))
             return
         }
         

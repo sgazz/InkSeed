@@ -22,23 +22,23 @@ enum RulesEngine {
             let startDot = gameState.dot(withID: stroke.startDotID),
             let endDot = gameState.dot(withID: stroke.endDotID)
         else {
-            return .invalid(reason: "Start ili end nisu dovoljno blizu tačke.")
+            return .invalid(reason: NSLocalizedString("move_validation.start_or_end_not_near_dot", comment: "Move validation error when stroke endpoints cannot map to nearby dots"))
         }
 
         if stroke.startDotID == stroke.endDotID {
             if startDot.degree + 2 > gameState.maxDegreePerDot {
-                return .invalid(reason: "Tačka nema dovoljno slobodnog stepena za loop.")
+                return .invalid(reason: NSLocalizedString("move_validation.loop_degree_limit_reached", comment: "Move validation error when a loop would exceed node degree"))
             }
         } else if startDot.degree >= gameState.maxDegreePerDot || endDot.degree >= gameState.maxDegreePerDot {
-            return .invalid(reason: "Jedna od tačaka je na max degree.")
+            return .invalid(reason: NSLocalizedString("move_validation.node_max_degree_reached", comment: "Move validation error when one endpoint node already reached max degree"))
         }
 
         if crossesOrTouchesExistingEdges(stroke: stroke, edges: gameState.edges, profile: profile) {
-            return .invalid(reason: "Linija seče ili dodiruje postojeću liniju.")
+            return .invalid(reason: NSLocalizedString("move_validation.line_crosses_or_touches_existing", comment: "Move validation error when a stroke intersects existing edges"))
         }
 
         if passesThroughUnrelatedDots(stroke: stroke, dots: gameState.dots, radius: profile.nodePathCollisionRadius) {
-            return .invalid(reason: "Linija prolazi preblizu druge tačke.")
+            return .invalid(reason: NSLocalizedString("move_validation.line_too_close_to_other_dot", comment: "Move validation error when a stroke passes too close to unrelated node"))
         }
 
         return .valid

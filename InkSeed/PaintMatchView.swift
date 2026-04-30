@@ -98,14 +98,13 @@ struct PaintMatchView: View {
 
                 VStack {
                     HStack(spacing: 10) {
-                        Text("Paint Your Match 🎨")
-                            .font(.system(size: 21, weight: .semibold, design: .rounded))
-                            .foregroundStyle(AppTheme.graphiteInk.opacity(0.95))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(.ultraThinMaterial, in: Capsule())
+                        Button(action: {}) {
+                            Text(L10n.t("paint.header"))
+                        }
+                        .buttonStyle(InkSeedSecondaryButtonStyle())
+                        .allowsHitTesting(false)
                         Spacer()
-                        Button("Done") { dismiss() }
+                        Button(L10n.t("action.done")) { dismiss() }
                             .buttonStyle(InkSeedSecondaryButtonStyle())
                     }
                     .padding(.horizontal, 20)
@@ -115,10 +114,10 @@ struct PaintMatchView: View {
 
                     HStack(alignment: .bottom, spacing: 14) {
                         HStack(spacing: 10) {
-                            Button("Undo") { _ = fills.popLast() }
+                            Button(L10n.t("action.undo")) { _ = fills.popLast() }
                                 .buttonStyle(InkSeedSecondaryButtonStyle())
                                 .disabled(fills.isEmpty)
-                            Button("Clear") {
+                            Button(L10n.t("action.clear")) {
                                 withAnimation(.easeOut(duration: 0.2)) {
                                     fills.removeAll()
                                     fillRevealProgressByID.removeAll()
@@ -261,7 +260,7 @@ struct PaintMatchView: View {
         PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
             guard status == .authorized || status == .limited else {
                 DispatchQueue.main.async {
-                    showTransientStatus("Photos permission needed")
+                    showTransientStatus(L10n.t("paint.photos_permission_needed"))
                 }
                 return
             }
@@ -269,7 +268,7 @@ struct PaintMatchView: View {
                 PHAssetChangeRequest.creationRequestForAsset(from: image)
             }) { success, _ in
                 DispatchQueue.main.async {
-                    showTransientStatus(success ? "Saved to Photos. You can share it from Photos." : "Save failed")
+                    showTransientStatus(success ? L10n.t("paint.saved_to_photos") : L10n.t("paint.save_failed"))
                 }
             }
         }
@@ -346,15 +345,15 @@ struct PaintMatchView: View {
     private func rejectionMessage(for reason: PaintRegionDetector.RejectionReason) -> String? {
         switch reason {
         case .tapOutsideBoard:
-            return "Tap inside the board"
+            return L10n.t("paint.rejection.tap_inside_board")
         case .alreadyFilled:
-            return "This area is already filled"
+            return L10n.t("paint.rejection.already_filled")
         case .openRegion:
-            return "Area edge is open"
+            return L10n.t("paint.rejection.open_region")
         case .openThroughGap:
-            return "Try tapping deeper inside the area"
+            return L10n.t("paint.rejection.open_through_gap")
         case .tooSmall:
-            return "Area is too small to fill"
+            return L10n.t("paint.rejection.too_small")
         case .blockedSeed:
             return nil
         }
@@ -372,11 +371,11 @@ struct PaintMatchView: View {
     }
 
     private var modalCardBackground: Color {
-        colorScheme == .dark ? Color(hex: 0x14171C, alpha: 0.97) : Color(hex: 0xF7F1E7, alpha: 0.98)
+        colorScheme == .dark ? AppTheme.darkModalSurface.opacity(0.97) : Color(hex: 0xF7F1E7, alpha: 0.98)
     }
 
     private var canvasCardBackground: Color {
-        colorScheme == .dark ? Color(hex: 0x1B1E24, alpha: 0.95) : AppTheme.paperSecondary.opacity(0.66)
+        colorScheme == .dark ? AppTheme.darkCanvasSurface.opacity(0.95) : AppTheme.paperSecondary.opacity(0.66)
     }
 }
 

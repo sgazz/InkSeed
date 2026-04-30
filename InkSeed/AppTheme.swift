@@ -130,6 +130,11 @@ enum AppTheme {
     static let pendingValid = dynamicColor(light: Color(hex: 0x7C3AED), dark: Color(hex: 0x66D1FF))
     static let invalidPreview = dynamicColor(light: Color(hex: 0xC84E4E), dark: Color(hex: 0xFF6B6B))
     static let newNodePulse = dynamicColor(light: Color(hex: 0x7C3AED), dark: Color(hex: 0xFFD166))
+    static let warmHighlight = Color(hex: 0xF1E9DB)
+    static let darkSurface = Color(hex: 0x17191E)
+    static let darkModalSurface = Color(hex: 0x14171C)
+    static let darkCanvasSurface = Color(hex: 0x1B1E24)
+    static let dangerAccent = Color(hex: 0xFF6B6B)
 
     private static func dynamicColor(light: Color, dark: Color) -> Color {
         Color(

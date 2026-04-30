@@ -67,11 +67,11 @@ struct GameView: View {
         VStack(spacing: 18) {
             Spacer()
 
-            Text("Choose your play space")
+            Text(L10n.t("orientation.choose_play_space"))
                 .font(.system(size: 36, weight: .semibold, design: .rounded))
                 .foregroundStyle(AppTheme.graphiteInk.opacity(0.96))
 
-            Text("InkSeed works best when the board stays still.")
+            Text(L10n.t("orientation.board_stays_still_hint"))
                 .font(.title3)
                 .foregroundStyle(secondaryTextColor)
                 .multilineTextAlignment(.center)
@@ -81,7 +81,7 @@ struct GameView: View {
                 Button {
                     selectOrientation(.portrait)
                 } label: {
-                    Label("Portrait", systemImage: "ipad")
+                    Label(L10n.t("orientation.portrait"), systemImage: "ipad")
                         .frame(width: 168)
                 }
                 .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor, minimumHeight: 52, showsBackground: false))
@@ -89,7 +89,7 @@ struct GameView: View {
                 Button {
                     selectOrientation(.landscape)
                 } label: {
-                    Label("Landscape", systemImage: "ipad.landscape")
+                    Label(L10n.t("orientation.landscape"), systemImage: "ipad.landscape")
                         .frame(width: 168)
                 }
                 .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor, minimumHeight: 52, showsBackground: false))
@@ -132,17 +132,17 @@ struct GameView: View {
                         .padding(.bottom, isPadScale ? 12 : 6)
                         .opacity(welcomeLogoOpacity)
 
-                        Text("InkSeed")
+                        Text(L10n.t("welcome.brand_name"))
                             .font(.system(size: titleSize, weight: .semibold, design: .rounded))
                             .foregroundStyle(AppTheme.graphiteInk.opacity(0.98))
                             .opacity(welcomeTitleOpacity)
 
-                        Text("Calm strategy through drawing.")
+                        Text(L10n.t("welcome.subtitle"))
                             .font(.system(size: subtitleSize, weight: .regular, design: .rounded))
                             .foregroundStyle(secondaryTextColor)
                             .opacity(welcomeSubtitleOpacity)
 
-                        Text("Every move plants a possibility.")
+                        Text(L10n.t("welcome.tagline"))
                             .font(.system(size: taglineSize, weight: .regular, design: .serif))
                             .tracking(isPadScale ? 0.62 : 0.45)
                             .foregroundStyle(secondaryTextColor.opacity(0.88))
@@ -153,7 +153,7 @@ struct GameView: View {
                         Button {
                             startNewMatch()
                         } label: {
-                            Text("Start Drawing")
+                            Text(L10n.t("action.start_drawing"))
                                 .font(.system(size: isPadScale ? 29 : 22, weight: .semibold, design: .rounded))
                                 .frame(width: ctaWidth, height: ctaHeight)
                         }
@@ -161,7 +161,7 @@ struct GameView: View {
                         .opacity(welcomeCTAOpacity)
                         .offset(y: welcomeCTAOffset)
 
-                        Button("Change Orientation") {
+                        Button(L10n.t("action.change_orientation")) {
                             selectedPlayOrientation = nil
                         }
                         .buttonStyle(InkSeedSecondaryButtonStyle())
@@ -228,12 +228,12 @@ struct GameView: View {
     private var topBar: some View {
         HStack(spacing: 10) {
             HStack(spacing: 10) {
-                Button("New Game") {
+                Button(L10n.t("action.new_game")) {
                     startNewMatch()
                 }
                 .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor))
 
-                Button("Undo") {
+                Button(L10n.t("action.undo")) {
                     undoTapped()
                 }
                 .buttonStyle(InkSeedSecondaryButtonStyle())
@@ -288,7 +288,7 @@ struct GameView: View {
     private var setupFooter: some View {
         HStack(spacing: 14) {
             HStack(spacing: 10) {
-                Text("Place 3–6 dots to begin")
+                Text(L10n.t("setup.place_dots_to_begin"))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.92 : 0.82))
 
@@ -303,7 +303,7 @@ struct GameView: View {
             .overlay(
                 InkSeedNodeFrame(
                     color: colorScheme == .dark ? .white.opacity(0.8) : AppTheme.graphiteInk.opacity(0.74),
-                    glowColor: colorScheme == .dark ? Color(hex: 0xF1E9DB).opacity(0.16) : AppTheme.graphiteInk.opacity(0.06),
+                    glowColor: colorScheme == .dark ? AppTheme.warmHighlight.opacity(0.16) : AppTheme.graphiteInk.opacity(0.06),
                     isDashed: false,
                     emphasized: false,
                     nodeDiameter: 8
@@ -312,7 +312,7 @@ struct GameView: View {
 
             Spacer(minLength: 8)
 
-            Button("Start Drawing") {
+            Button(L10n.t("action.start_drawing")) {
                 gameState.finalizeSetupIfPossible()
             }
             .buttonStyle(InkSeedSecondaryButtonStyle())
@@ -327,12 +327,12 @@ struct GameView: View {
         Group {
             if let winner = gameState.winner {
                 VStack(spacing: 16) {
-                    InkSeedWinnerDisplay(text: "\(winner.title) wins")
+                    InkSeedWinnerDisplay(text: L10n.f("result.player_wins_format", winner.title))
 
                     Button {
                         showPaintMatch = true
                     } label: {
-                        Label("Paint the Match", systemImage: "paintpalette.fill")
+                        Label(L10n.t("action.paint_the_match"), systemImage: "paintpalette.fill")
                             .font(.subheadline.weight(.semibold))
                     }
                     .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor))
@@ -347,7 +347,7 @@ struct GameView: View {
                                 .fill(playerColor(for: gameState.currentPlayer))
                                 .frame(width: 12, height: 12)
 
-                            Text("Player \(gameState.currentPlayer.title)")
+                            Text(L10n.f("player.current_player_format", gameState.currentPlayer.title))
                                 .font(.headline)
                                 .foregroundStyle(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.95 : 0.8))
                         }
@@ -359,12 +359,12 @@ struct GameView: View {
 
                     Spacer(minLength: 24)
 
-                    Button(modeSelection == 1 ? "Hint" : "Check moves") {
+                    Button(modeSelection == 1 ? L10n.t("action.hint") : L10n.t("action.check_moves")) {
                         checkMovesTapped()
                     }
                     .buttonStyle(InkSeedSecondaryButtonStyle())
                     .disabled(gameState.flowState != .play)
-                    .accessibilityLabel(modeSelection == 1 ? "Show hint" : "Check moves")
+                    .accessibilityLabel(modeSelection == 1 ? L10n.t("accessibility.show_hint") : L10n.t("action.check_moves"))
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -412,7 +412,7 @@ struct GameView: View {
         }
 
         private var glowColor: Color {
-            colorScheme == .dark ? Color(hex: 0xF1E9DB).opacity(0.2) : AppTheme.graphiteInk.opacity(0.06)
+            colorScheme == .dark ? AppTheme.warmHighlight.opacity(0.2) : AppTheme.graphiteInk.opacity(0.06)
         }
     }
 
@@ -487,10 +487,10 @@ struct GameView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(24)
             }
-            .navigationTitle("How to Play")
+            .navigationTitle(L10n.t("help.title"))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Let's Draw!") {
+                    Button(L10n.t("action.lets_draw")) {
                         showHelp = false
                     }
                     .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor))
@@ -502,9 +502,9 @@ struct GameView: View {
     private var phaseHint: String {
         switch gameState.turnPhase {
         case .drawLine:
-            return "Phase A: draw line"
+            return L10n.t("phase.draw_line")
         case .placeNewDot:
-            return "Phase B: tap line to place new dot"
+            return L10n.t("phase.tap_line_place_dot")
         }
     }
 
@@ -517,7 +517,7 @@ struct GameView: View {
         )
 
         if hasLegalMove {
-            interactionState.showInvalid("A move may still exist.")
+            interactionState.showInvalid(L10n.t("feedback.move_may_still_exist"))
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 interactionState.hideFeedback()
             }
@@ -561,11 +561,11 @@ struct GameView: View {
     }
 
     private var bottomBarBackground: Color {
-        colorScheme == .dark ? Color(hex: 0x17191E, alpha: 0.96) : AppTheme.paperSecondary.opacity(0.68)
+        colorScheme == .dark ? AppTheme.darkSurface.opacity(0.96) : AppTheme.paperSecondary.opacity(0.68)
     }
 
     private var currentAccentColor: Color {
-        colorScheme == .dark ? Color(hex: 0xF1E9DB) : AppTheme.graphiteInk.opacity(0.86)
+        colorScheme == .dark ? AppTheme.warmHighlight : AppTheme.graphiteInk.opacity(0.86)
     }
 
     private func playerColor(for player: Player) -> Color {
@@ -574,13 +574,13 @@ struct GameView: View {
 
     private var helpCards: [HelpCard] {
         [
-            HelpCard(id: "place", title: "Place Dots", description: "Put 3–6 dots anywhere.", demo: .placeDots),
-            HelpCard(id: "draw", title: "Draw a Line", description: "Connect two dots.", demo: .drawLine),
-            HelpCard(id: "newdot", title: "Add New Dot", description: "Tap the line to grow the board.", demo: .addDot),
-            HelpCard(id: "max3", title: "Max 3 Links", description: "Each dot can have up to 3 connections.", demo: .maxLinks),
-            HelpCard(id: "cross", title: "No Crossing", description: "Lines cannot cross.", demo: .noCrossing),
-            HelpCard(id: "finish", title: "Finish the Match", description: "When no moves remain, winner appears.", demo: .finishMatch),
-            HelpCard(id: "bonus", title: "Bonus", description: "After the match, paint the spaces and make art.", demo: .paintBonus)
+            HelpCard(id: "place", title: L10n.t("help.card.place_dots.title"), description: L10n.t("help.card.place_dots.description"), demo: .placeDots),
+            HelpCard(id: "draw", title: L10n.t("help.card.draw_line.title"), description: L10n.t("help.card.draw_line.description"), demo: .drawLine),
+            HelpCard(id: "newdot", title: L10n.t("help.card.add_dot.title"), description: L10n.t("help.card.add_dot.description"), demo: .addDot),
+            HelpCard(id: "max3", title: L10n.t("help.card.max_links.title"), description: L10n.t("help.card.max_links.description"), demo: .maxLinks),
+            HelpCard(id: "cross", title: L10n.t("help.card.no_crossing.title"), description: L10n.t("help.card.no_crossing.description"), demo: .noCrossing),
+            HelpCard(id: "finish", title: L10n.t("help.card.finish_match.title"), description: L10n.t("help.card.finish_match.description"), demo: .finishMatch),
+            HelpCard(id: "bonus", title: L10n.t("help.card.bonus.title"), description: L10n.t("help.card.bonus.description"), demo: .paintBonus)
         ]
     }
 
@@ -595,7 +595,7 @@ struct GameView: View {
     private func helpCardGlowColor(isExpanded: Bool) -> Color {
         guard isExpanded else { return .clear }
         if colorScheme == .dark {
-            return Color(hex: 0xF1E9DB).opacity(0.2)
+            return AppTheme.warmHighlight.opacity(0.2)
         } else {
             return AppTheme.graphiteInk.opacity(0.08)
         }
@@ -835,7 +835,7 @@ private struct HelpMiniDemoView: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill((isDark ? Color(hex: 0x17191E) : .white).opacity(isDark ? 0.92 : 0.9))
+                .fill((isDark ? AppTheme.darkSurface : .white).opacity(isDark ? 0.92 : 0.9))
             Canvas { context, size in
                 let ink = isDark ? Color(hex: 0xF2EEE6) : Color(hex: 0x2A2A2A)
                 switch demo {
@@ -875,7 +875,7 @@ private struct HelpMiniDemoView: View {
                         drawDot(context: &context, at: t, scale: 1, color: ink)
                     }
                     var reject = Path(); reject.move(to: c); reject.addLine(to: CGPoint(x: size.width * 0.82, y: size.height * 0.74))
-                    context.stroke(reject, with: .color(Color(hex: 0xFF6B6B).opacity(p1)), style: .init(lineWidth: 2, lineCap: .round, dash: [4, 3]))
+                    context.stroke(reject, with: .color(AppTheme.dangerAccent.opacity(p1)), style: .init(lineWidth: 2, lineCap: .round, dash: [4, 3]))
                 case .noCrossing:
                     var base = Path()
                     base.move(to: CGPoint(x: size.width * 0.24, y: size.height * 0.72))
@@ -884,7 +884,7 @@ private struct HelpMiniDemoView: View {
                     var crossing = Path()
                     crossing.move(to: CGPoint(x: size.width * 0.24, y: size.height * 0.3))
                     crossing.addLine(to: CGPoint(x: size.width * 0.76, y: size.height * 0.72))
-                    context.stroke(crossing, with: .color(Color(hex: 0xFF6B6B).opacity(p1)), style: .init(lineWidth: 2, lineCap: .round, dash: [4, 3]))
+                    context.stroke(crossing, with: .color(AppTheme.dangerAccent.opacity(p1)), style: .init(lineWidth: 2, lineCap: .round, dash: [4, 3]))
                 case .finishMatch:
                     let badgeRect = CGRect(x: size.width * 0.35, y: size.height * 0.28, width: size.width * 0.3, height: size.height * 0.44)
                     context.fill(Path(roundedRect: badgeRect, cornerRadius: 10), with: .color(accent.opacity(0.2 * p1 + 0.05)))
@@ -928,7 +928,7 @@ private struct HelpMiniDemoView: View {
 
 struct InkSeedPrimaryButtonStyle: ButtonStyle {
     let accent: Color
-    var minimumHeight: CGFloat = 46
+    var minimumHeight: CGFloat = UIConstants.Button.defaultMinHeight
     var showsBackground: Bool = true
 
     func makeBody(configuration: Configuration) -> some View {
@@ -941,7 +941,7 @@ struct InkSeedPrimaryButtonStyle: ButtonStyle {
 }
 
 struct InkSeedSecondaryButtonStyle: ButtonStyle {
-    var minimumHeight: CGFloat = 46
+    var minimumHeight: CGFloat = UIConstants.Button.defaultMinHeight
 
     func makeBody(configuration: Configuration) -> some View {
         InkSeedNodeFrameButtonBody(
@@ -953,7 +953,7 @@ struct InkSeedSecondaryButtonStyle: ButtonStyle {
 }
 
 struct InkSeedCompactButtonStyle: ButtonStyle {
-    var minimumSize: CGFloat = 42
+    var minimumSize: CGFloat = UIConstants.Button.compactMinSize
 
     func makeBody(configuration: Configuration) -> some View {
         InkSeedNodeFrameButtonBody(
@@ -983,8 +983,8 @@ private struct InkSeedNodeFrameButtonBody: View {
         configuration.label
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(foregroundColor)
-            .padding(.horizontal, forceSquare ? 10 : 20)
-            .padding(.vertical, forceSquare ? 8 : 10)
+            .padding(.horizontal, forceSquare ? UIConstants.Button.verticalPadding : UIConstants.Button.horizontalPadding)
+            .padding(.vertical, forceSquare ? 8 : UIConstants.Button.verticalPadding)
             .frame(minWidth: forceSquare ? minimumHeight : nil)
             .frame(minHeight: minimumHeight)
             .background(frameBackground)
@@ -1005,7 +1005,7 @@ private struct InkSeedNodeFrameButtonBody: View {
     }
 
     private var frameBackground: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
+        RoundedRectangle(cornerRadius: UIConstants.Radius.buttonCorner, style: .continuous)
             .fill(backgroundColor)
     }
 
@@ -1067,7 +1067,7 @@ private struct InkSeedNodeFrameButtonBody: View {
         switch variant {
         case .primary:
             if colorScheme == .dark {
-                return Color(hex: 0xF1E9DB).opacity(0.26)
+                return AppTheme.warmHighlight.opacity(0.26)
             } else {
                 return AppTheme.graphiteInk.opacity(0.08)
             }
