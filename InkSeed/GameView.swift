@@ -84,7 +84,7 @@ struct GameView: View {
                     Label("Portrait", systemImage: "ipad")
                         .frame(width: 168)
                 }
-                .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor, minimumHeight: 52))
+                .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor, minimumHeight: 52, showsBackground: false))
 
                 Button {
                     selectOrientation(.landscape)
@@ -92,7 +92,7 @@ struct GameView: View {
                     Label("Landscape", systemImage: "ipad.landscape")
                         .frame(width: 168)
                 }
-                .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor, minimumHeight: 52))
+                .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor, minimumHeight: 52, showsBackground: false))
             }
             .padding(.top, 8)
 
@@ -157,7 +157,7 @@ struct GameView: View {
                                 .font(.system(size: isPadScale ? 29 : 22, weight: .semibold, design: .rounded))
                                 .frame(width: ctaWidth, height: ctaHeight)
                         }
-                        .buttonStyle(InkSeedPrimaryButtonStyle(accent: AppTheme.royalPurple, minimumHeight: ctaHeight))
+                        .buttonStyle(InkSeedSecondaryButtonStyle(minimumHeight: ctaHeight))
                         .opacity(welcomeCTAOpacity)
                         .offset(y: welcomeCTAOffset)
 
@@ -233,29 +233,19 @@ struct GameView: View {
                 }
                 .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor))
 
-                Button("Restart") {
-                    gameState.restartPlay()
+                Button("Undo") {
+                    undoTapped()
                 }
                 .buttonStyle(InkSeedSecondaryButtonStyle())
-
-                Button("?") {
-                    showHelp = true
-                }
-                .buttonStyle(InkSeedCompactButtonStyle())
+                .disabled(!canUndo)
             }
 
             Spacer()
 
-            InkSeedLogoSymbol()
-                .frame(width: 34, height: 16)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(
-                    Capsule().stroke(.white.opacity(colorScheme == .dark ? 0.18 : 0.38), lineWidth: 0.7)
-                )
-
-            Spacer()
+            Button("?") {
+                showHelp = true
+            }
+            .buttonStyle(InkSeedCompactButtonStyle())
 
             Button {
                 prefersDarkTheme.toggle()
@@ -297,72 +287,47 @@ struct GameView: View {
 
     private var setupFooter: some View {
         HStack(spacing: 14) {
-            Text("Place 3–6 dots to begin")
-                .font(.headline)
-                .foregroundStyle(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.9 : 0.75))
+            HStack(spacing: 10) {
+                Text("Place 3–6 dots to begin")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.92 : 0.82))
 
-            Text("\(gameState.dots.count)/\(gameState.maxSetupDots)")
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(secondaryTextColor)
-
-            Button("Undo") {
-                gameState.removeLastSetupDot()
+                Text("\(gameState.dots.count)/\(gameState.maxSetupDots)")
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(secondaryTextColor)
             }
-            .buttonStyle(InkSeedSecondaryButtonStyle())
-            .disabled(gameState.dots.isEmpty)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .frame(minHeight: 46)
+            .background(Color.clear)
+            .overlay(
+                InkSeedNodeFrame(
+                    color: colorScheme == .dark ? .white.opacity(0.8) : AppTheme.graphiteInk.opacity(0.74),
+                    glowColor: colorScheme == .dark ? Color(hex: 0xF1E9DB).opacity(0.16) : AppTheme.graphiteInk.opacity(0.06),
+                    isDashed: false,
+                    emphasized: false,
+                    nodeDiameter: 8
+                )
+            )
+
+            Spacer(minLength: 8)
 
             Button("Start Drawing") {
                 gameState.finalizeSetupIfPossible()
             }
-            .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor))
+            .buttonStyle(InkSeedSecondaryButtonStyle())
             .disabled(gameState.dots.count < gameState.minSetupDots)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(bottomBarBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(colorScheme == .dark ? .white.opacity(0.08) : .clear, lineWidth: 0.8)
-        }
         .tint(currentAccentColor)
     }
 
     private var playerFooter: some View {
-        HStack(spacing: 14) {
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(playerColor(for: gameState.currentPlayer))
-                    .frame(width: 12, height: 12)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Turn: \(gameState.currentPlayer.title)")
-                        .font(.headline)
-                        .foregroundStyle(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.95 : 0.8))
-
-                    Text(phaseHint)
-                        .font(.subheadline)
-                        .foregroundStyle(secondaryTextColor)
-                }
-            }
-
-            Spacer(minLength: 10)
-
-            HStack(spacing: 8) {
-                Button(modeSelection == 1 ? "Need help?" : "Check moves") {
-                    checkMovesTapped()
-                }
-                .buttonStyle(InkSeedSecondaryButtonStyle())
-                .disabled(gameState.winner != nil || gameState.flowState != .play)
-
-                if let winner = gameState.winner {
-                    Text("\(winner.title) wins")
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, 11)
-                        .padding(.vertical, 6)
-                        .background(playerColor(for: winner).opacity(0.22), in: Capsule())
-                        .overlay(
-                            Capsule().stroke(playerColor(for: winner).opacity(0.42), lineWidth: 0.8)
-                        )
+        Group {
+            if let winner = gameState.winner {
+                VStack(spacing: 16) {
+                    InkSeedWinnerDisplay(text: "\(winner.title) wins")
 
                     Button {
                         showPaintMatch = true
@@ -372,6 +337,36 @@ struct GameView: View {
                     }
                     .buttonStyle(InkSeedPrimaryButtonStyle(accent: currentAccentColor))
                 }
+                .frame(maxWidth: .infinity)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            } else {
+                HStack(alignment: .center, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 9) {
+                            Circle()
+                                .fill(playerColor(for: gameState.currentPlayer))
+                                .frame(width: 12, height: 12)
+
+                            Text("Player \(gameState.currentPlayer.title)")
+                                .font(.headline)
+                                .foregroundStyle(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.95 : 0.8))
+                        }
+
+                        Text(phaseHint)
+                            .font(.subheadline)
+                            .foregroundStyle(secondaryTextColor)
+                    }
+
+                    Spacer(minLength: 24)
+
+                    Button(modeSelection == 1 ? "Hint" : "Check moves") {
+                        checkMovesTapped()
+                    }
+                    .buttonStyle(InkSeedSecondaryButtonStyle())
+                    .disabled(gameState.flowState != .play)
+                    .accessibilityLabel(modeSelection == 1 ? "Show hint" : "Check moves")
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(.horizontal, 14)
@@ -381,70 +376,118 @@ struct GameView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(colorScheme == .dark ? .white.opacity(0.08) : .clear, lineWidth: 0.8)
         }
+        .animation(.easeInOut(duration: 0.24), value: gameState.winner != nil)
+    }
+
+    private struct InkSeedWinnerDisplay: View {
+        let text: String
+        @Environment(\.colorScheme) private var colorScheme
+
+        var body: some View {
+            Text(text)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(colorScheme == .dark ? .white.opacity(0.96) : AppTheme.graphiteInk.opacity(0.94))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .frame(minHeight: 52)
+                .background(Color.clear)
+                .overlay(
+                    InkSeedNodeFrame(
+                        color: frameColor,
+                        glowColor: glowColor,
+                        isDashed: false,
+                        emphasized: false,
+                        nodeDiameter: 8
+                    )
+                )
+                .shadow(color: .black.opacity(colorScheme == .dark ? 0.16 : 0.05), radius: 6, x: 0, y: 3)
+        }
+
+        private var frameColor: Color {
+            if colorScheme == .dark {
+                return .white.opacity(0.84)
+            } else {
+                return AppTheme.graphiteInk.opacity(0.8)
+            }
+        }
+
+        private var glowColor: Color {
+            colorScheme == .dark ? Color(hex: 0xF1E9DB).opacity(0.2) : AppTheme.graphiteInk.opacity(0.06)
+        }
     }
 
     private var helpSheet: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    ForEach(helpCards) { card in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 18) {
+                    ForEach(Array(helpCards.enumerated()), id: \.element.id) { index, card in
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(alignment: .top, spacing: 10) {
+                                HStack(spacing: 6) {
+                                    Circle()
+                                        .stroke(helpCardFrameColor(isExpanded: true), lineWidth: 1.4)
+                                        .frame(width: 12, height: 12)
+                                    Text("\(index + 1)")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(secondaryTextColor.opacity(0.94))
+                                }
+                                .padding(.top, 3)
+
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text(card.title)
                                         .font(.title3.weight(.semibold))
-                                        .foregroundStyle(AppTheme.graphiteInk.opacity(0.95))
+                                        .foregroundStyle(AppTheme.graphiteInk.opacity(colorScheme == .dark ? 0.96 : 0.9))
                                     Text(card.description)
-                                        .font(.title3)
-                                        .foregroundStyle(secondaryTextColor.opacity(0.98))
+                                        .font(.subheadline)
+                                        .foregroundStyle(secondaryTextColor.opacity(0.96))
                                 }
                                 Spacer(minLength: 8)
-                                if expandedHelpCardID == card.id {
-                                    Button("↻") {
-                                        helpReplaySeed[card.id, default: 0] += 1
-                                    }
-                                    .buttonStyle(InkSeedCompactButtonStyle())
+                                Button("↻") {
+                                    helpReplaySeed[card.id, default: 0] += 1
                                 }
+                                .buttonStyle(InkSeedCompactButtonStyle())
                             }
 
-                            if expandedHelpCardID == card.id {
-                                HelpMiniDemoView(
-                                    demo: card.demo,
-                                    replaySeed: helpReplaySeed[card.id, default: 0],
-                                    accent: currentAccentColor,
-                                    isDark: colorScheme == .dark
-                                )
-                                .frame(height: 92)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                            }
+                            HelpMiniDemoView(
+                                demo: card.demo,
+                                replaySeed: helpReplaySeed[card.id, default: 0],
+                                accent: currentAccentColor,
+                                isDark: colorScheme == .dark
+                            )
+                            .frame(height: 92)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .background(helpCardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(
+                        .padding(.vertical, 15)
+                        .background(
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(colorScheme == .dark ? .white.opacity(0.08) : .clear, lineWidth: 0.8)
+                                .fill(
+                                    (colorScheme == .dark ? Color.white : AppTheme.graphiteInk)
+                                        .opacity(0.045)
+                                )
                         )
-                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.24 : 0.08), radius: 8, x: 0, y: 4)
+                        .overlay(
+                            InkSeedNodeFrame(
+                                color: helpCardFrameColor(isExpanded: true),
+                                glowColor: helpCardGlowColor(isExpanded: true),
+                                isDashed: false,
+                                emphasized: true,
+                                nodeDiameter: 8
+                            )
+                        )
+                        .shadow(
+                            color: .black.opacity(colorScheme == .dark ? 0.28 : 0.08),
+                            radius: 9,
+                            x: 0,
+                            y: 5
+                        )
                         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .onTapGesture {
-                            withAnimation(.easeInOut(duration: 0.22)) {
-                                if expandedHelpCardID == card.id {
-                                    expandedHelpCardID = nil
-                                } else {
-                                    expandedHelpCardID = card.id
-                                    // Tap-to-open immediately restarts demo (no replay required).
-                                    helpReplaySeed[card.id, default: 0] += 1
-                                }
-                            }
-                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(24)
             }
-            .navigationTitle("How to Play ✨")
+            .navigationTitle("How to Play")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Let's Draw!") {
@@ -488,6 +531,31 @@ struct GameView: View {
         gameState.currentPlayer == .one ? .two : .one
     }
 
+    private var canUndo: Bool {
+        switch gameState.flowState {
+        case .welcome:
+            return false
+        case .setup:
+            return !gameState.dots.isEmpty
+        case .play:
+            return gameState.turnPhase == .placeNewDot && gameState.pendingMove != nil
+        }
+    }
+
+    private func undoTapped() {
+        switch gameState.flowState {
+        case .welcome:
+            break
+        case .setup:
+            gameState.removeLastSetupDot()
+        case .play:
+            // UI-level undo during play cancels the current in-progress move before commit.
+            if gameState.turnPhase == .placeNewDot, gameState.pendingMove != nil {
+                gameState.clearPendingMove()
+            }
+        }
+    }
+
     private var secondaryTextColor: Color {
         colorScheme == .dark ? Color(hex: 0xB9B2A8).opacity(0.96) : AppTheme.graphiteInk.opacity(0.62)
     }
@@ -497,27 +565,40 @@ struct GameView: View {
     }
 
     private var currentAccentColor: Color {
-        AppTheme.warmOrange
+        colorScheme == .dark ? Color(hex: 0xF1E9DB) : AppTheme.graphiteInk.opacity(0.86)
     }
 
     private func playerColor(for player: Player) -> Color {
         player == .one ? AppTheme.playerOneUndertone : AppTheme.playerTwoUndertone
     }
 
-    private var helpCardBackground: Color {
-        colorScheme == .dark ? Color(hex: 0x1F2228, alpha: 0.96) : Color(hex: 0xF8EFE1, alpha: 0.92)
-    }
-
     private var helpCards: [HelpCard] {
         [
-            HelpCard(id: "place", title: "1️⃣ Place Dots", description: "Put 3–6 dots anywhere.", demo: .placeDots),
-            HelpCard(id: "draw", title: "2️⃣ Draw a Line", description: "Connect two dots.", demo: .drawLine),
-            HelpCard(id: "newdot", title: "3️⃣ Add New Dot", description: "Tap the line to grow the board.", demo: .addDot),
-            HelpCard(id: "max3", title: "4️⃣ Max 3 Links", description: "Each dot can have up to 3 connections.", demo: .maxLinks),
-            HelpCard(id: "cross", title: "5️⃣ No Crossing", description: "Lines cannot cross.", demo: .noCrossing),
-            HelpCard(id: "finish", title: "6️⃣ Finish the Match", description: "When no moves remain, winner appears.", demo: .finishMatch),
-            HelpCard(id: "bonus", title: "🎨 Bonus", description: "After the match, paint the spaces and make art.", demo: .paintBonus)
+            HelpCard(id: "place", title: "Place Dots", description: "Put 3–6 dots anywhere.", demo: .placeDots),
+            HelpCard(id: "draw", title: "Draw a Line", description: "Connect two dots.", demo: .drawLine),
+            HelpCard(id: "newdot", title: "Add New Dot", description: "Tap the line to grow the board.", demo: .addDot),
+            HelpCard(id: "max3", title: "Max 3 Links", description: "Each dot can have up to 3 connections.", demo: .maxLinks),
+            HelpCard(id: "cross", title: "No Crossing", description: "Lines cannot cross.", demo: .noCrossing),
+            HelpCard(id: "finish", title: "Finish the Match", description: "When no moves remain, winner appears.", demo: .finishMatch),
+            HelpCard(id: "bonus", title: "Bonus", description: "After the match, paint the spaces and make art.", demo: .paintBonus)
         ]
+    }
+
+    private func helpCardFrameColor(isExpanded: Bool) -> Color {
+        if colorScheme == .dark {
+            return .white.opacity(isExpanded ? 0.9 : 0.78)
+        } else {
+            return AppTheme.graphiteInk.opacity(isExpanded ? 0.88 : 0.72)
+        }
+    }
+
+    private func helpCardGlowColor(isExpanded: Bool) -> Color {
+        guard isExpanded else { return .clear }
+        if colorScheme == .dark {
+            return Color(hex: 0xF1E9DB).opacity(0.2)
+        } else {
+            return AppTheme.graphiteInk.opacity(0.08)
+        }
     }
 
     private var welcomeBackground: some View {
@@ -848,18 +929,19 @@ private struct HelpMiniDemoView: View {
 struct InkSeedPrimaryButtonStyle: ButtonStyle {
     let accent: Color
     var minimumHeight: CGFloat = 46
+    var showsBackground: Bool = true
 
     func makeBody(configuration: Configuration) -> some View {
         InkSeedNodeFrameButtonBody(
             configuration: configuration,
-            variant: .primary(accent: accent),
+            variant: .primary(accent: accent, showsBackground: showsBackground),
             minimumHeight: minimumHeight
         )
     }
 }
 
 struct InkSeedSecondaryButtonStyle: ButtonStyle {
-    var minimumHeight: CGFloat = 44
+    var minimumHeight: CGFloat = 46
 
     func makeBody(configuration: Configuration) -> some View {
         InkSeedNodeFrameButtonBody(
@@ -871,7 +953,7 @@ struct InkSeedSecondaryButtonStyle: ButtonStyle {
 }
 
 struct InkSeedCompactButtonStyle: ButtonStyle {
-    var minimumSize: CGFloat = 36
+    var minimumSize: CGFloat = 42
 
     func makeBody(configuration: Configuration) -> some View {
         InkSeedNodeFrameButtonBody(
@@ -885,7 +967,7 @@ struct InkSeedCompactButtonStyle: ButtonStyle {
 
 private struct InkSeedNodeFrameButtonBody: View {
     enum Variant {
-        case primary(accent: Color)
+        case primary(accent: Color, showsBackground: Bool)
         case secondary
         case compact
     }
@@ -901,8 +983,8 @@ private struct InkSeedNodeFrameButtonBody: View {
         configuration.label
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(foregroundColor)
-            .padding(.horizontal, forceSquare ? 10 : 22)
-            .padding(.vertical, forceSquare ? 8 : 11)
+            .padding(.horizontal, forceSquare ? 10 : 20)
+            .padding(.vertical, forceSquare ? 8 : 10)
             .frame(minWidth: forceSquare ? minimumHeight : nil)
             .frame(minHeight: minimumHeight)
             .background(frameBackground)
@@ -930,8 +1012,12 @@ private struct InkSeedNodeFrameButtonBody: View {
     private var frameColor: Color {
         if !isEnabled { return AppTheme.graphiteInk.opacity(0.26) }
         switch variant {
-        case .primary(let accent):
-            return accent.opacity(configuration.isPressed ? 1 : 0.92)
+        case .primary:
+            if colorScheme == .dark {
+                return .white.opacity(configuration.isPressed ? 0.94 : 0.82)
+            } else {
+                return AppTheme.graphiteInk.opacity(configuration.isPressed ? 0.9 : 0.78)
+            }
         case .secondary:
             if colorScheme == .dark {
                 return .white.opacity(configuration.isPressed ? 0.88 : 0.74)
@@ -950,8 +1036,8 @@ private struct InkSeedNodeFrameButtonBody: View {
     private var foregroundColor: Color {
         if !isEnabled { return AppTheme.graphiteInk.opacity(0.45) }
         switch variant {
-        case .primary(let accent):
-            return colorScheme == .dark ? .white.opacity(0.97) : accent.opacity(0.97)
+        case .primary:
+            return colorScheme == .dark ? .white.opacity(0.96) : AppTheme.graphiteInk.opacity(0.94)
         case .secondary:
             return colorScheme == .dark ? .white.opacity(0.9) : AppTheme.graphiteInk.opacity(0.92)
         case .compact:
@@ -962,23 +1048,29 @@ private struct InkSeedNodeFrameButtonBody: View {
     private var backgroundColor: Color {
         if !isEnabled { return .clear }
         switch variant {
-        case .primary(let accent):
-            let baseOpacity: CGFloat = configuration.isPressed ? 0.08 : 0.055
-            return accent.opacity(colorScheme == .dark ? max(baseOpacity, 0.07) : baseOpacity)
+        case .primary(let accent, let showsBackground):
+            // Keep the node-line frame language, but remove filled interiors.
+            guard showsBackground else { return .clear }
+            let pressOpacity: CGFloat = colorScheme == .dark ? 0.035 : 0.025
+            return accent.opacity(configuration.isPressed ? pressOpacity : 0)
         case .secondary:
             return (colorScheme == .dark ? Color.white : AppTheme.graphiteInk)
-                .opacity(configuration.isPressed ? 0.05 : 0.0)
+                .opacity(configuration.isPressed ? 0.03 : 0)
         case .compact:
             return (colorScheme == .dark ? Color.white : AppTheme.graphiteInk)
-                .opacity(configuration.isPressed ? 0.05 : 0.0)
+                .opacity(configuration.isPressed ? 0.03 : 0)
         }
     }
 
     private var glowColor: Color {
         if !isEnabled { return .clear }
         switch variant {
-        case .primary(let accent):
-            return accent.opacity(colorScheme == .dark ? 0.34 : 0.16)
+        case .primary:
+            if colorScheme == .dark {
+                return Color(hex: 0xF1E9DB).opacity(0.26)
+            } else {
+                return AppTheme.graphiteInk.opacity(0.08)
+            }
         case .secondary:
             return .clear
         case .compact:
@@ -993,7 +1085,7 @@ private struct InkSeedNodeFrameButtonBody: View {
     private var elevatedShadowPrimary: (color: Color, radius: CGFloat, y: CGFloat) {
         guard isEnabled else { return (.clear, 0, 0) }
         switch variant {
-        case .primary(let accent):
+        case .primary:
             if colorScheme == .dark {
                 return (.black.opacity(0.28 * pressFactor), 12, 5)
             } else {
@@ -1025,7 +1117,7 @@ private struct InkSeedNodeFrameButtonBody: View {
     private var ambientGlow: (color: Color, radius: CGFloat, y: CGFloat) {
         guard isEnabled else { return (.clear, 0, 0) }
         switch variant {
-        case .primary(let accent):
+        case .primary(let accent, _):
             if colorScheme == .dark {
                 return (accent.opacity(0.22 * pressFactor), 10, 0)
             } else {
